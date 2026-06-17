@@ -1,11 +1,32 @@
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  font-family: Arial, Helvetica, sans-serif;
-  background: #ffffff;
-  color: #171717;
-}
+:root { --ink:#1f2328; --muted:#6b7280; --line:#e5e7eb; --accent:#0f766e; --bg:#f8f9fa; --panel:#fff; }
+* { box-sizing:border-box; }
+body { margin:0; font-family:system-ui,sans-serif; color:var(--ink); background:var(--bg); }
+a { color:var(--accent); }
+.container { max-width:1100px; margin:0 auto; padding:24px; }
+.tabs { display:flex; gap:8px; border-bottom:2px solid var(--line); margin-bottom:20px; }
+.tab { padding:10px 16px; border:none; background:none; cursor:pointer; font-size:15px; border-bottom:2px solid transparent; margin-bottom:-2px; }
+.tab.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
+.row { display:flex; gap:12px; align-items:center; }
+.grow { flex:1; }
+.btn { padding:8px 14px; border:1px solid var(--line); background:#fff; border-radius:8px; cursor:pointer; font-size:14px; }
+.btn.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+.btn:disabled { opacity:.5; cursor:not-allowed; }
+.input { padding:8px 12px; border:1px solid var(--line); border-radius:8px; font-size:14px; width:100%; }
+table { width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+th { text-align:left; font-size:12px; text-transform:uppercase; color:var(--muted); padding:10px 12px; border-bottom:1px solid var(--line); }
+td { padding:10px 12px; border-bottom:1px solid var(--line); font-size:14px; }
+tr:last-child td { border-bottom:none; }
+.mono { font-family:ui-monospace,monospace; }
+.badge { font-size:12px; padding:2px 8px; border-radius:999px; background:#eef2f1; color:var(--accent); }
+.badge.warn { background:#fde8e4; color:#b3391f; }
+.muted { color:var(--muted); }
+.classes { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; }
+.chip { padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:#fff; cursor:pointer; font-size:13px; }
+.chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+.drawer-scrim { position:fixed; inset:0; background:rgba(0,0,0,.3); }
+.drawer { position:fixed; top:0; right:0; height:100%; width:380px; background:#fff; padding:24px; box-shadow:-4px 0 20px rgba(0,0,0,.1); overflow:auto; }
+.field { margin-bottom:14px; display:flex; flex-direction:column; gap:5px; }
+.field label { font-size:12px; text-transform:uppercase; color:var(--muted); }
+.seg { display:flex; gap:6px; }
+.seg button { flex:1; padding:8px; border:1px solid var(--line); background:#fff; border-radius:8px; cursor:pointer; }
+.seg button.on { background:var(--accent); color:#fff; border-color:var(--accent); }

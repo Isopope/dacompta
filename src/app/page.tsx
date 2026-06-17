@@ -1,8 +1,2 @@
-export default function Home() {
-  return (
-    <main>
-      <h1>DaCompta</h1>
-      <p>Application de comptabilité SYSCOHADA</p>
-    </main>
-  );
-}
+import { redirect } from "next/navigation";
+export default function Home() { redirect("/plan-comptable"); }
