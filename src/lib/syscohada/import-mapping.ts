@@ -49,14 +49,31 @@ export function detecterRolesColonnes(lignes: string[][]): RoleColonne[] {
     });
   }
 
+  // Precompute average trimmed cell length per column (used as tie-break for INTITULE).
+  const avgLen: number[] = Array.from({ length: nbCols }, (_, c) => {
+    const col = lignes.map((l) => (l[c] ?? "").toString().trim()).filter((v) => v !== "");
+    return col.length === 0 ? 0 : col.reduce((s, v) => s + v.length, 0) / col.length;
+  });
+
   const result: RoleColonne[] = Array(nbCols).fill("IGNORER");
   const assigned = new Set<number>();
 
-  // Assign each named role to the best unassigned column (threshold 0.6)
+  // Claim NUMERO then TYPE before INTITULE: numeric/type columns are distinctive and
+  // must be claimed first so the general text signal doesn't absorb them.
   for (const role of ["NUMERO", "TYPE", "INTITULE"] as const) {
-    const best = scores[role]
-      .filter((s) => s.score >= 0.6 && !assigned.has(s.col))
-      .sort((a, b) => b.score - a.score)[0];
+    const candidates = scores[role].filter((s) => s.score >= 0.6 && !assigned.has(s.col));
+    // Primary sort: highest score. Tie-break for INTITULE: shorter average cell length
+    // (account labels are terse; free-text comment columns have longer sentences).
+    // Final tie-break: leftmost column index for full determinism.
+    candidates.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      if (role === "INTITULE") {
+        const lenDiff = avgLen[a.col] - avgLen[b.col]; // prefer shorter (smaller avgLen)
+        if (lenDiff !== 0) return lenDiff;
+      }
+      return a.col - b.col; // prefer leftmost
+    });
+    const best = candidates[0];
     if (best) {
       result[best.col] = role;
       assigned.add(best.col);

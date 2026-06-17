@@ -16,6 +16,20 @@ describe("detecterRolesColonnes", () => {
     expect(roles[3]).toBe("TYPE");
     expect(roles[0]).toBe("IGNORER");
   });
+
+  it("choisit la bonne colonne intitulé quand deux colonnes sont du texte (départage déterministe)", () => {
+    // Col 0 is a long free-text comment column; col 2 is the real intitulé (short labels).
+    // Both score ~1.0 for INTITULE. The tie-break must prefer shorter average length (terse labels).
+    const f = [
+      ["Commentaire interne très long sur la saisie", "401100", "Fournisseurs", "D"],
+      ["Autre remarque de saisie assez longue ici", "411100", "Clients", "D"],
+    ];
+    const roles = detecterRolesColonnes(f);
+    expect(roles[1]).toBe("NUMERO");
+    expect(roles[2]).toBe("INTITULE");
+    expect(roles[3]).toBe("TYPE");
+    expect(roles[0]).toBe("IGNORER");
+  });
 });
 
 describe("construireLignesImport", () => {
