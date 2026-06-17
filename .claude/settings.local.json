@@ -9,7 +9,8 @@
       "Bash(mkdir -p src)",
       "Bash(mv app *)",
       "Bash(npm install *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(git commit *)"
     ]
   }
 }
