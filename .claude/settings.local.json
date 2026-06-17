@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git -c user.name=DaCompta -c user.email=dev@dacompta.local commit -q -m 'docs: spec de design — incrément 1 Plan comptable *)",
+      "Bash(git -c user.name=DaCompta -c user.email=dev@dacompta.local commit -q -m 'docs: plan d'\\\\''implémentation — incrément Plan comptable *)",
+      "Bash(npx create-next-app@latest . --ts --app --eslint --no-tailwind --import-alias \"@/*\" --use-npm --skip-install)",
+      "Bash(mkdir -p src)",
+      "Bash(mv app *)",
+      "Bash(npm install *)",
+      "Bash(npm run *)"
+    ]
+  }
+}
