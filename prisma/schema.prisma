@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Referentiel {
+  id       String    @id @default(cuid())
+  code     String    @unique // "SYSCOHADA_REVISE"
+  libelle  String
+  classes  Classe[]
+  natures  Nature[]
+  dossiers Dossier[]
+}
+
+model Classe {
+  id            String      @id @default(cuid())
+  numero        Int // 1..9
+  libelle       String
+  referentiel   Referentiel @relation(fields: [referentielId], references: [id])
+  referentielId String
+
+  @@unique([referentielId, numero])
+}
+
+model Nature {
+  id            String      @id @default(cuid())
+  racine        String // "40", "6", ...
+  libelle       String
+  famille       String // TIERS | CAPITAUX | TRESORERIE | GESTION | IMMO | STOCK
+  reportNplus1  Boolean
+  referentiel   Referentiel @relation(fields: [referentielId], references: [id])
+  referentielId String
+
+  @@unique([referentielId, racine])
+}
+
+model Dossier {
+  id            String      @id @default(cuid())
+  nom           String
+  ville         String
+  pays          String
+  devise        String
+  exercice      Int
+  referentiel   Referentiel @relation(fields: [referentielId], references: [id])
+  referentielId String
+  comptes       Compte[]
+  imports       ImportLog[]
+}
+
+model Compte {
+  id           String   @id @default(cuid())
+  numero       String // 6 chiffres
+  intitule     String
+  type         String // DETAIL | TOTAL
+  classeNum    Int
+  natureRacine String?
+  reportNplus1 Boolean
+  collectif    Boolean  @default(false)
+  statut       String   @default("ACTIF") // ACTIF | ARCHIVE
+  dossier      Dossier  @relation(fields: [dossierId], references: [id])
+  dossierId    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([dossierId, numero])
+}
+
+model ImportLog {
+  id            String   @id @default(cuid())
+  dossier       Dossier  @relation(fields: [dossierId], references: [id])
+  dossierId     String
+  fichierNom    String
+  mode          String // FUSIONNER | REMPLACER | AJOUTER
+  snapshotAvant String // JSON des comptes avant import
+  compteIds     String // JSON array des ids créés/modifiés
+  annule        Boolean  @default(false)
+  createdAt     DateTime @default(now())
+}
