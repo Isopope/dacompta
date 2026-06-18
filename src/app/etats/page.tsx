@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { getBalance, getGrandLivre } from "@/server/balance";
-import { deriverBilan, deriverCompteResultat } from "@/lib/etats/etats-financiers";
+import { deriverBilan, deriverCompteResultat, deriverFluxTresorerie } from "@/lib/etats/etats-financiers";
 import EtatsClient from "./EtatsClient";
 
 // États déduits d'une base vivante : rendu dynamique, jamais figé au build.
@@ -14,6 +14,7 @@ export default async function EtatsPage() {
   ]);
   const bilan = deriverBilan(balance);
   const compteResultat = deriverCompteResultat(balance);
+  const fluxTresorerie = deriverFluxTresorerie(balance, grandLivre);
 
   return (
     <div className="container" style={{ maxWidth: 1280 }}>
@@ -27,6 +28,7 @@ export default async function EtatsPage() {
         grandLivre={grandLivre}
         bilan={bilan}
         compteResultat={compteResultat}
+        fluxTresorerie={fluxTresorerie}
       />
     </div>
   );

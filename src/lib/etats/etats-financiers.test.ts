@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { BalanceLigne, BalanceResultat } from "@/server/balance";
-import { deriverBilan, deriverCompteResultat } from "./etats-financiers";
+import { deriverBilan, deriverCompteResultat, deriverFluxTresorerie } from "./etats-financiers";
 
 function ligne(p: Partial<BalanceLigne> & { compteNumero: string; classeNum: number }): BalanceLigne {
   return {
@@ -84,5 +84,57 @@ describe("deriverBilan", () => {
     expect(bilan.totalPassif).toBe(68_000_000);
     expect(bilan.totalActif).toBe(bilan.totalPassif);
     expect(bilan.equilibre).toBe(true);
+  });
+});
+
+describe("deriverFluxTresorerie", () => {
+  it("calcule le flux d'exploitation (produits encaissés − charges − variation BFRE)", () => {
+    const flux = deriverFluxTresorerie(balance);
+    // Ventes 701100 +40M (entrée) − Achats 601100 30M (sortie) − Clients 411000 30M (BFRE, sortie)
+    expect(flux.exploitation.total).toBe(-20_000_000);
+    const libelles = flux.exploitation.postes.map((p) => p.libelle).join(" | ");
+    expect(libelles).toContain("701100");
+    expect(libelles).toContain("601100");
+    expect(libelles).toContain("411000"); // créance client = besoin en fonds de roulement
+  });
+
+  it("classe l'acquisition d'immobilisations (classe 2 débitée) en sortie d'investissement", () => {
+    const flux = deriverFluxTresorerie(balance);
+    // Matériel 241000 acquis (débit 36M) → sortie
+    expect(flux.investissement.total).toBe(-36_000_000);
+    expect(flux.investissement.postes[0].libelle).toContain("Acquisition");
+    expect(flux.investissement.postes[0].montant).toBe(-36_000_000);
+  });
+
+  it("classe l'augmentation de capital (101 crédité) en entrée de financement", () => {
+    const flux = deriverFluxTresorerie(balance);
+    expect(flux.financement.total).toBe(50_000_000);
+    expect(flux.financement.postes[0].libelle).toContain("Augmentation de capital");
+    expect(flux.financement.postes[0].montant).toBe(50_000_000);
+  });
+
+  it("la variation de trésorerie = somme des trois catégories", () => {
+    const flux = deriverFluxTresorerie(balance);
+    expect(flux.variationTresorerie).toBe(
+      flux.exploitation.total + flux.investissement.total + flux.financement.total
+    );
+    expect(flux.variationTresorerie).toBe(-6_000_000); // -20M -36M +50M
+  });
+
+  it("boucle : trésorerie de clôture = ouverture + variation, et reflète les comptes 52/57", () => {
+    const flux = deriverFluxTresorerie(balance);
+    expect(flux.tresorerieOuverture).toBe(0); // exercice neuf, aucun RAN
+    expect(flux.tresorerieCloture).toBe(flux.tresorerieOuverture + flux.variationTresorerie);
+    // Contrôle indépendant : solde net des disponibilités 521100 (−8M) + 571100 (+2M) = −6M
+    const tresoBalance = balance.lignes
+      .filter((l) => l.compteNumero.startsWith("52") || l.compteNumero.startsWith("57"))
+      .reduce((s, l) => s + l.soldeDebiteur - l.soldeCrediteur, 0);
+    expect(flux.tresorerieCloture).toBe(tresoBalance);
+  });
+
+  it("ignore les postes à montant nul", () => {
+    const flux = deriverFluxTresorerie(balance);
+    const tous = [...flux.exploitation.postes, ...flux.investissement.postes, ...flux.financement.postes];
+    expect(tous.every((p) => p.montant !== 0)).toBe(true);
   });
 });

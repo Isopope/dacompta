@@ -2,13 +2,13 @@
 
 import { useMemo, useState } from "react";
 import type { BalanceResultat, GrandLivreCompte } from "@/server/balance";
-import type { Bilan, CompteResultat } from "@/lib/etats/etats-financiers";
+import type { Bilan, CompteResultat, FluxTresorerie } from "@/lib/etats/etats-financiers";
 
 const fmt = (n: number) =>
   n === 0 ? "" : n.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 const fmt0 = (n: number) => n.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-type DocId = "balance-generale" | "grand-livre" | "bilan" | "compte-resultat";
+type DocId = "balance-generale" | "grand-livre" | "bilan" | "compte-resultat" | "flux-tresorerie";
 
 interface DocDef {
   id: string;
@@ -49,7 +49,7 @@ const CATEGORIES: CatDef[] = [
     docs: [
       { id: "bilan", nom: "Bilan", desc: "Actif = Passif · résultat de l'exercice", pret: true },
       { id: "compte-resultat", nom: "Compte de résultat", desc: "charges / produits · résultat net", pret: true },
-      { id: "tafire", nom: "TAFIRE / Flux de trésorerie", desc: "tableau des ressources et emplois", pret: false },
+      { id: "flux-tresorerie", nom: "Tableau des Flux de Trésorerie", desc: "exploitation · investissement · financement (AUDCIF 2017)", pret: true },
       { id: "notes", nom: "Notes annexes", desc: "états annexés à la liasse", pret: false },
     ],
   },
@@ -70,6 +70,7 @@ export default function EtatsClient(props: {
   grandLivre: GrandLivreCompte[];
   bilan: Bilan;
   compteResultat: CompteResultat;
+  fluxTresorerie: FluxTresorerie;
 }) {
   const [catIndex, setCatIndex] = useState(0);
   const [docId, setDocId] = useState<string>("balance-generale");
@@ -193,6 +194,7 @@ function Apercu(props: {
   grandLivre: GrandLivreCompte[];
   bilan: Bilan;
   compteResultat: CompteResultat;
+  fluxTresorerie: FluxTresorerie;
 }) {
   switch (props.docId) {
     case "balance-generale":
@@ -203,6 +205,8 @@ function Apercu(props: {
       return <ApercuBilan bilan={props.bilan} />;
     case "compte-resultat":
       return <ApercuCompteResultat cr={props.compteResultat} />;
+    case "flux-tresorerie":
+      return <ApercuFluxTresorerie flux={props.fluxTresorerie} />;
     default:
       return <p className="muted">Document à venir.</p>;
   }
@@ -342,6 +346,75 @@ function ApercuCompteResultat({ cr }: { cr: CompteResultat }) {
         </span>
       </p>
     </div>
+  );
+}
+
+function ApercuFluxTresorerie({ flux }: { flux: FluxTresorerie }) {
+  const vide =
+    flux.exploitation.postes.length === 0 &&
+    flux.investissement.postes.length === 0 &&
+    flux.financement.postes.length === 0;
+  if (vide) return <Vide />;
+  return (
+    <div>
+      <CategorieFlux titre="A · FLUX D'EXPLOITATION" cat={flux.exploitation} />
+      <div style={{ height: 16 }} />
+      <CategorieFlux titre="B · FLUX D'INVESTISSEMENT" cat={flux.investissement} />
+      <div style={{ height: 16 }} />
+      <CategorieFlux titre="C · FLUX DE FINANCEMENT" cat={flux.financement} />
+      <table style={{ marginTop: 16 }}>
+        <tbody>
+          <tr>
+            <td>Trésorerie d&apos;ouverture (RAN 52/57)</td>
+            <td className={num} style={numCell}>{fmt0(flux.tresorerieOuverture)}</td>
+          </tr>
+          <tr style={{ fontWeight: 600 }}>
+            <td>Variation de trésorerie (A + B + C)</td>
+            <td className={num} style={numCell}>{fmt0(flux.variationTresorerie)}</td>
+          </tr>
+          <tr style={{ fontWeight: 600 }}>
+            <td>Trésorerie de clôture</td>
+            <td className={num} style={numCell}>{fmt0(flux.tresorerieCloture)}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p className="muted" style={{ fontSize: 12, marginTop: 12 }}>
+        ✓ Clôture = ouverture + variation · déduit des écritures (AUDCIF 2017 — remplace le TAFIRE)
+      </p>
+    </div>
+  );
+}
+
+function CategorieFlux({ titre, cat }: { titre: string; cat: { total: number; postes: { libelle: string; montant: number }[] } }) {
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th>{titre}</th>
+          <th style={numCell}>Flux</th>
+        </tr>
+      </thead>
+      <tbody>
+        {cat.postes.length === 0 ? (
+          <tr>
+            <td className="muted" colSpan={2} style={{ fontSize: 13 }}>Aucun mouvement</td>
+          </tr>
+        ) : (
+          cat.postes.map((p, i) => (
+            <tr key={i}>
+              <td style={{ fontSize: 13 }}>{p.libelle}</td>
+              <td className={num} style={numCell}>{fmt0(p.montant)}</td>
+            </tr>
+          ))
+        )}
+      </tbody>
+      <tfoot>
+        <tr style={{ fontWeight: 600 }}>
+          <td>Total</td>
+          <td className={num} style={numCell}>{fmt0(cat.total)}</td>
+        </tr>
+      </tfoot>
+    </table>
   );
 }
 
