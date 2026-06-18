@@ -56,6 +56,31 @@ async function main() {
     });
   }
 
+  const BUDGET_POSTES = [
+    { code: "706100", libelle: "Recette transport", sens: "P", prevision: 60_000_000, compteLie: "706" },
+    { code: "701100", libelle: "Recette vente", sens: "P", prevision: 18_000_000, compteLie: "701" },
+    { code: "601100", libelle: "Achat marchandises", sens: "C", prevision: 9_500_000, compteLie: "601" },
+    { code: "605300", libelle: "Achat carburant", sens: "C", prevision: 16_000_000, compteLie: "605" },
+    { code: "660000", libelle: "Charge personnel", sens: "C", prevision: 21_867_000, compteLie: "661" },
+    { code: "605600", libelle: "Achat lubrifiant", sens: "C", prevision: 4_760_000, compteLie: "605" },
+    { code: "625200", libelle: "Assurance", sens: "C", prevision: 4_000_000, compteLie: "625" },
+    { code: "624200", libelle: "Réparation", sens: "C", prevision: 2_430_000, compteLie: "624" },
+    { code: "605200", libelle: "Électricité", sens: "C", prevision: 1_230_000, compteLie: "605" },
+    { code: "638400", libelle: "Frais mission", sens: "C", prevision: 1_100_000, compteLie: "638" },
+    { code: "605100", libelle: "Eau", sens: "C", prevision: 840_000, compteLie: "605" },
+    { code: "671200", libelle: "Charge financière", sens: "C", prevision: 700_000, compteLie: "671" },
+    { code: "621000", libelle: "Frais communication", sens: "C", prevision: 544_000, compteLie: "628" },
+    { code: "607500", libelle: "Fourniture bureau", sens: "C", prevision: 290_000, compteLie: "605" },
+    { code: "631000", libelle: "Frais bancaires", sens: "C", prevision: 78_000, compteLie: "631" },
+  ];
+  for (const bp of BUDGET_POSTES) {
+    await prisma.budgetPoste.upsert({
+      where: { dossierId_code: { dossierId: dossier.id, code: bp.code } },
+      update: { libelle: bp.libelle, sens: bp.sens, prevision: bp.prevision, compteLie: bp.compteLie },
+      create: { code: bp.code, libelle: bp.libelle, sens: bp.sens, prevision: bp.prevision, compteLie: bp.compteLie, dossierId: dossier.id },
+    });
+  }
+
   for (const c of COMPTES_LES_ASSOCIES) {
     const nature = detecterNature(c.numero, NATURES);
     const reportNplus1 = nature ? nature.reportNplus1 : deduireReport(extraireClasse(c.numero));
