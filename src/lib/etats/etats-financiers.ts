@@ -58,16 +58,22 @@ export function deriverCompteResultat(balance: BalanceResultat): CompteResultat 
 
 /**
  * Bilan simplifié :
- *  - Actif  = soldes débiteurs des classes 2-3-4-5 (immobilisations, stocks, créances, trésorerie)
- *  - Passif = soldes créditeurs des classes 1-4 (capitaux, dettes) + résultat de l'exercice
- *  - Le résultat net (produits 7 − charges 6) équilibre le passif.
+ *  - Actif  = soldes débiteurs des classes 2-3-4-5 (immobilisations, stocks,
+ *    créances, trésorerie débitrice)
+ *  - Passif = soldes créditeurs des classes 1-4-5 (capitaux propres, dettes,
+ *    trésorerie créditrice = découvert bancaire) + résultat de l'exercice
+ *  - Le résultat net (produits 7 − charges 6) s'ajoute aux capitaux propres au passif.
+ *
+ * Tant que la balance est équilibrée (débit = crédit, ce qui est garanti par la
+ * partie double) et que les capitaux propres (classe 1) sont créditeurs et les
+ * classes 2-3 débitrices, le bilan s'équilibre : totalActif === totalPassif.
  */
 export function deriverBilan(balance: BalanceResultat): Bilan {
   const actif = balance.lignes
     .filter((l) => [2, 3, 4, 5].includes(l.classeNum) && l.soldeDebiteur > 0)
     .map((l) => poste(l, l.soldeDebiteur));
   const passif = balance.lignes
-    .filter((l) => [1, 4].includes(l.classeNum) && l.soldeCrediteur > 0)
+    .filter((l) => [1, 4, 5].includes(l.classeNum) && l.soldeCrediteur > 0)
     .map((l) => poste(l, l.soldeCrediteur));
 
   const resultatNet = deriverCompteResultat(balance).resultatNet;
