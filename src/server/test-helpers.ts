@@ -5,6 +5,9 @@ import {
 
 /** Vide la base et reseed le référentiel + un dossier de test. Renvoie le dossierId. */
 export async function resetDb(): Promise<string> {
+  await prisma.ligneEcriture.deleteMany();
+  await prisma.piece.deleteMany();
+  await prisma.journal.deleteMany();
   await prisma.importLog.deleteMany();
   await prisma.compte.deleteMany();
   await prisma.dossier.deleteMany();

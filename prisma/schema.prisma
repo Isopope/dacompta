@@ -49,6 +49,8 @@ model Dossier {
   referentielId String
   comptes       Compte[]
   imports       ImportLog[]
+  journaux      Journal[]
+  pieces        Piece[]
 }
 
 model Compte {
@@ -79,4 +81,49 @@ model ImportLog {
   compteIds     String // JSON array des ids créés/modifiés
   annule        Boolean  @default(false)
   createdAt     DateTime @default(now())
+}
+
+model Journal {
+  id        String  @id @default(cuid())
+  code      String // ACH | VT | CAI | BIMA | OD | PE | RAN
+  libelle   String
+  dossier   Dossier @relation(fields: [dossierId], references: [id])
+  dossierId String
+  pieces    Piece[]
+
+  @@unique([dossierId, code])
+}
+
+model Piece {
+  id          String          @id @default(cuid())
+  numeroPiece String
+  datePiece   DateTime
+  fournisseur String?
+  montantHT   Decimal         @default(0)
+  montantTVA  Decimal         @default(0)
+  montantTTC  Decimal         @default(0)
+  statut      String          @default("BROUILLON") // BROUILLON | VALIDEE | ANNULEE
+  journal     Journal         @relation(fields: [journalId], references: [id])
+  journalId   String
+  dossier     Dossier         @relation(fields: [dossierId], references: [id])
+  dossierId   String
+  lignes      LigneEcriture[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@unique([dossierId, numeroPiece])
+}
+
+model LigneEcriture {
+  id           String  @id @default(cuid())
+  piece        Piece   @relation(fields: [pieceId], references: [id], onDelete: Cascade)
+  pieceId      String
+  compteNumero String // référence Compte.numero (pas de FK formelle)
+  libelleLigne String
+  debit             Decimal @default(0)
+  credit            Decimal @default(0)
+  ordre             Int
+  sectionAnalytique String? // section analytique optionnelle
+
+  @@index([pieceId])
 }
