@@ -39,6 +39,23 @@ async function main() {
       },
     }));
 
+  const JOURNAUX = [
+    { code: "ACH", libelle: "Achats" },
+    { code: "VT", libelle: "Ventes" },
+    { code: "CAI", libelle: "Caisse" },
+    { code: "BIMA", libelle: "Banque" },
+    { code: "OD", libelle: "Opérations diverses" },
+    { code: "PE", libelle: "Paie" },
+    { code: "RAN", libelle: "Report à nouveau" },
+  ];
+  for (const j of JOURNAUX) {
+    await prisma.journal.upsert({
+      where: { dossierId_code: { dossierId: dossier.id, code: j.code } },
+      update: { libelle: j.libelle },
+      create: { code: j.code, libelle: j.libelle, dossierId: dossier.id },
+    });
+  }
+
   for (const c of COMPTES_LES_ASSOCIES) {
     const nature = detecterNature(c.numero, NATURES);
     const reportNplus1 = nature ? nature.reportNplus1 : deduireReport(extraireClasse(c.numero));
@@ -56,7 +73,7 @@ async function main() {
     });
   }
 
-  console.log(`Seed OK — référentiel ${ref.code}, dossier ${dossier.nom}, ${COMPTES_LES_ASSOCIES.length} comptes.`);
+  console.log(`Seed OK — référentiel ${ref.code}, dossier ${dossier.nom}, ${COMPTES_LES_ASSOCIES.length} comptes, ${JOURNAUX.length} journaux.`);
 }
 
 main().finally(() => prisma.$disconnect());
