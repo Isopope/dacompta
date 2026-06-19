@@ -183,31 +183,25 @@ export async function getBalance(dossierId: string): Promise<BalanceResultat> {
   ]);
 
   // Pour chaque compte : ouverture (lignes du journal RAN, signée débit − crédit) et
-  // mouvements de l'exercice (toutes les autres lignes). Le solde N reste la somme
-  // des deux (ouverture + mouvements) — on le cumule à part pour rester exact.
+  // mouvements de l'exercice (toutes les autres lignes). Le solde N = ouverture +
+  // (débit − crédit) des mouvements.
   //
-  // Lettrage : le solde des mouvements est cumulé à partir d'`amountResidual`
-  // (résiduel signé selon le sens de la ligne) plutôt que du débit − crédit brut.
-  // Pour une ligne jamais lettrée amountResidual = |débit − crédit|, donc le
-  // résiduel signé vaut exactement débit − crédit : le solde est inchangé. Quand
-  // une ligne est lettrée, son résiduel décroît vers 0 et le solde reflète le
-  // « reste à encaisser/payer ». Les colonnes débit/crédit restent les montants
-  // bruts (jamais modifiés par le lettrage).
+  // PRINCIPE COMPTABLE : le solde d'un compte ne dépend JAMAIS de l'état de
+  // lettrage. Lettrer une facture et son règlement ne fait pas « disparaître » le
+  // solde — ce sont les mouvements débit/crédit qui le ramènent à zéro. Le
+  // « reste à encaisser/payer » (résiduel de lettrage) est une information
+  // distincte, qui relève d'une balance âgée, pas de la balance générale.
   const acc = new Map<
     string,
-    { ouverture: Prisma.Decimal; debit: Prisma.Decimal; credit: Prisma.Decimal; residuel: Prisma.Decimal }
+    { ouverture: Prisma.Decimal; debit: Prisma.Decimal; credit: Prisma.Decimal }
   >();
   for (const l of lignes) {
-    const a =
-      acc.get(l.compteNumero) ?? { ouverture: D(0), debit: D(0), credit: D(0), residuel: D(0) };
+    const a = acc.get(l.compteNumero) ?? { ouverture: D(0), debit: D(0), credit: D(0) };
     if (l.piece.journal.code === "RAN") {
       a.ouverture = a.ouverture.plus(l.debit).minus(l.credit);
     } else {
       a.debit = a.debit.plus(l.debit);
       a.credit = a.credit.plus(l.credit);
-      // Résiduel signé : + pour une ligne débit, − pour une ligne crédit.
-      const sens = l.debit.greaterThan(l.credit) ? 1 : l.credit.greaterThan(l.debit) ? -1 : 0;
-      a.residuel = a.residuel.plus(l.amountResidual.times(sens));
     }
     acc.set(l.compteNumero, a);
   }
@@ -215,13 +209,13 @@ export async function getBalance(dossierId: string): Promise<BalanceResultat> {
   // Comptes qui n'ont qu'un solde N-1 (snapshot) sans mouvement N : on les fait
   // exister dans la balance (N = 0) pour que la comparaison N / N-1 reste complète.
   for (const numero of snapshotN1.keys()) {
-    if (!acc.has(numero)) acc.set(numero, { ouverture: D(0), debit: D(0), credit: D(0), residuel: D(0) });
+    if (!acc.has(numero)) acc.set(numero, { ouverture: D(0), debit: D(0), credit: D(0) });
   }
 
   const lignesBalance: BalanceLigne[] = [...acc.entries()].map(([numero, a]) => {
     const m = metaPour(meta, numero);
-    // Solde N = ouverture + résiduel signé des mouvements de l'exercice.
-    const solde = a.ouverture.plus(a.residuel);
+    // Solde N = ouverture + (débit − crédit) des mouvements de l'exercice.
+    const solde = a.ouverture.plus(a.debit).minus(a.credit);
     const debiteur = solde.isPositive() ? solde : D(0);
     const crediteur = solde.isNegative() ? solde.negated() : D(0);
     const ouverture = a.ouverture.toNumber();
