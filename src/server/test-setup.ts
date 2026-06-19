@@ -1,4 +1,5 @@
 import { execSync } from "node:child_process";
+import path from "node:path";
 
 // Recrée la base de test à partir des migrations (et non plus db push),
 // pour que les contraintes CHECK définies dans les migrations soient appliquées.
@@ -13,5 +14,6 @@ export default function setup() {
         "yes, reset test.db from migrations",
     },
     stdio: "inherit",
+    cwd: path.resolve(__dirname, "..", ".."),
   });
 }
