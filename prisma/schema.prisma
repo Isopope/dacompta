@@ -58,19 +58,21 @@ model Dossier {
 }
 
 model Compte {
-  id           String   @id @default(cuid())
-  numero       String // 6 chiffres
-  intitule     String
-  type         String // DETAIL | TOTAL
-  classeNum    Int
-  natureRacine String?
-  reportNplus1 Boolean
-  collectif    Boolean  @default(false)
-  statut       String   @default("ACTIF") // ACTIF | ARCHIVE
-  dossier      Dossier  @relation(fields: [dossierId], references: [id])
-  dossierId    String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id               String           @id @default(cuid())
+  numero           String // 6 chiffres
+  intitule         String
+  type             String // DETAIL | TOTAL
+  classeNum        Int
+  natureRacine     String?
+  reportNplus1     Boolean
+  collectif        Boolean          @default(false)
+  statut           String           @default("ACTIF") // ACTIF | ARCHIVE
+  dossier          Dossier          @relation(fields: [dossierId], references: [id])
+  dossierId        String
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  lignes           LigneEcriture[]
+  soldesAnterieurs SoldeAnterieur[]
 
   @@unique([dossierId, numero])
 }
@@ -99,21 +101,28 @@ model Journal {
 }
 
 model Piece {
-  id          String          @id @default(cuid())
-  numeroPiece String
-  datePiece   DateTime
-  fournisseur String?
-  montantHT   Decimal         @default(0)
-  montantTVA  Decimal         @default(0)
-  montantTTC  Decimal         @default(0)
-  statut      String          @default("BROUILLON") // BROUILLON | VALIDEE | ANNULEE
-  journal     Journal         @relation(fields: [journalId], references: [id])
-  journalId   String
-  dossier     Dossier         @relation(fields: [dossierId], references: [id])
-  dossierId   String
-  lignes      LigneEcriture[]
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id              String          @id @default(cuid())
+  numeroPiece     String
+  datePiece       DateTime
+  fournisseur     String?
+  montantHT       Decimal         @default(0)
+  montantTVA      Decimal         @default(0)
+  montantTTC      Decimal         @default(0)
+  statut          String          @default("BROUILLON") // BROUILLON | VALIDEE | ANNULEE
+  journal         Journal         @relation(fields: [journalId], references: [id])
+  journalId       String
+  dossier         Dossier         @relation(fields: [dossierId], references: [id])
+  dossierId       String
+  lignes          LigneEcriture[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  exercice        Int?
+  dateValidation  DateTime?
+  hash            String?
+  hashPrecedent   String?
+  extourneDeId    String?
+  extourneDe      Piece?          @relation("Extourne", fields: [extourneDeId], references: [id])
+  extournes       Piece[]         @relation("Extourne")
 
   @@unique([dossierId, numeroPiece])
 }
@@ -138,11 +147,13 @@ model BudgetPoste {
 // résultat (les classes 6/7 n'ont pas de RAN). Le Bilan, lui, garde son N-1
 // déduit du RAN.
 model SoldeAnterieur {
-  id           String  @id @default(cuid())
+  id           String   @id @default(cuid())
   compteNumero String // référence Compte.numero (pas de FK formelle)
-  montant      Decimal @default(0) // solde N-1 signé débit − crédit
-  dossier      Dossier @relation(fields: [dossierId], references: [id])
+  montant      Decimal  @default(0) // solde N-1 signé débit − crédit
+  dossier      Dossier  @relation(fields: [dossierId], references: [id])
   dossierId    String
+  compteId     String?
+  compte       Compte?  @relation(fields: [compteId], references: [id], onDelete: Restrict)
 
   @@unique([dossierId, compteNumero])
 }
@@ -157,6 +168,8 @@ model LigneEcriture {
   credit            Decimal @default(0)
   ordre             Int
   sectionAnalytique String? // section analytique optionnelle
+  compteId          String?
+  compte            Compte? @relation(fields: [compteId], references: [id], onDelete: Restrict)
 
   // Lettrage (inspiré d'Odoo amount_residual). amountResidual = montant restant
   // à lettrer sur la ligne, en valeur absolue (initialisé à |débit − crédit|).
@@ -202,4 +215,14 @@ model RegleLettrage {
   createdAt      DateTime @default(now())
 
   @@index([dossierId])
+}
+
+model SequencePiece {
+  id            String @id @default(cuid())
+  dossierId     String
+  journalId     String
+  exercice      Int
+  dernierNumero Int    @default(0)
+
+  @@unique([dossierId, journalId, exercice])
 }
