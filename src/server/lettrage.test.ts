@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
-import { resetDb } from "./test-helpers";
+import { resetDb, seedComptesStandards } from "./test-helpers";
 import { getOpenLines } from "./lettrage";
 
 let dossierId: string;
@@ -8,12 +8,7 @@ let journalId: string;
 
 beforeEach(async () => {
   dossierId = await resetDb();
-  await prisma.compte.createMany({
-    data: [
-      { numero: "411000", intitule: "Clients", classeNum: 4, type: "DETAIL", reportNplus1: false, dossierId },
-      { numero: "707000", intitule: "Ventes", classeNum: 7, type: "DETAIL", reportNplus1: false, dossierId },
-    ],
-  });
+  await seedComptesStandards(dossierId);
   const j = await prisma.journal.create({ data: { code: "OD", libelle: "Opérations diverses", dossierId } });
   journalId = j.id;
 });
@@ -22,7 +17,14 @@ beforeEach(async () => {
 // Certains cas de test ont besoin de pièces volontairement déséquilibrées pour
 // isoler le sens d'une ligne ouverte. amountResidual = |débit − crédit|.
 type LigneTest = { compteNumero: string; debit: number; credit: number };
-function piece(numeroPiece: string, lignes: LigneTest[], datePiece?: Date) {
+async function piece(numeroPiece: string, lignes: LigneTest[], datePiece?: Date) {
+  // Résoudre les compteId depuis les comptes seedés (nécessaire car compteId est NOT NULL).
+  const numeros = [...new Set(lignes.map((l) => l.compteNumero))];
+  const comptes = await prisma.compte.findMany({
+    where: { dossierId, numero: { in: numeros } },
+    select: { id: true, numero: true },
+  });
+  const parNumero = new Map(comptes.map((c) => [c.numero, c.id]));
   return prisma.piece.create({
     data: {
       numeroPiece,
@@ -31,6 +33,7 @@ function piece(numeroPiece: string, lignes: LigneTest[], datePiece?: Date) {
       dossierId,
       lignes: {
         create: lignes.map((l, i) => ({
+          compteId: parNumero.get(l.compteNumero)!,
           compteNumero: l.compteNumero,
           libelleLigne: l.compteNumero,
           debit: l.debit,

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
-import { resetDb } from "./test-helpers";
+import { resetDb, seedComptesStandards } from "./test-helpers";
 import { creerPiece, listerPieces, validerPiece, annulerPiece } from "./pieces";
 
 let dossierId: string;
@@ -8,6 +8,7 @@ let journalId: string;
 
 beforeEach(async () => {
   dossierId = await resetDb();
+  await seedComptesStandards(dossierId);
   const j = await prisma.journal.create({
     data: { code: "ACH", libelle: "Achats", dossierId },
   });
@@ -15,6 +16,16 @@ beforeEach(async () => {
 });
 
 describe("creerPiece", () => {
+  it("refuse une ligne sur un compte inexistant", async () => {
+    await expect(creerPiece({
+      dossierId, journalId, numeroPiece: "ACH-X",
+      lignes: [
+        { compteNumero: "999999", libelleLigne: "Inconnu", debit: 100, credit: 0 },
+        { compteNumero: "401000", libelleLigne: "Fournisseur", debit: 0, credit: 100 },
+      ],
+    })).rejects.toThrow(/compte.*inexistant|introuvable/i);
+  });
+
   it("crée une pièce équilibrée avec ses lignes en BROUILLON", async () => {
     const p = await creerPiece({
       dossierId, journalId, numeroPiece: "ACH-001",

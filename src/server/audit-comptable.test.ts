@@ -4,7 +4,7 @@
 // Ce fichier est volontairement indépendant des helpers existants.
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
-import { resetDb } from "./test-helpers";
+import { resetDb, seedComptesStandards } from "./test-helpers";
 import { creerPiece, annulerPiece } from "./pieces";
 import { createLettrage } from "./lettrage";
 import { getBalance } from "./balance";
@@ -14,6 +14,7 @@ let journalId: string;
 
 beforeEach(async () => {
   dossierId = await resetDb();
+  await seedComptesStandards(dossierId);
   const j = await prisma.journal.create({
     data: { code: "OD", libelle: "Opérations diverses", dossierId },
   });
@@ -119,6 +120,7 @@ describe("CLAIM #5 — isolation multi-dossier du lettrage", () => {
     const d2 = await prisma.dossier.create({
       data: { nom: "Autre SA", ville: "Abidjan", pays: "CI", devise: "XOF", exercice: 2020, referentielId: ref.id },
     });
+    await seedComptesStandards(d2.id);
     const j2 = await prisma.journal.create({ data: { code: "OD", libelle: "OD", dossierId: d2.id } });
 
     const f1 = await creerPiece({

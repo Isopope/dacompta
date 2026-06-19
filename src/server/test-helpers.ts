@@ -3,6 +3,28 @@ import {
   REFERENTIEL_CODE, REFERENTIEL_LIBELLE, CLASSES, NATURES,
 } from "@/lib/syscohada/referentiel";
 
+const COMPTES_STD: { numero: string; intitule: string; classeNum: number }[] = [
+  { numero: "101000", intitule: "Capital", classeNum: 1 },
+  { numero: "162000", intitule: "Emprunts", classeNum: 1 },
+  { numero: "401000", intitule: "Fournisseurs", classeNum: 4 },
+  { numero: "411000", intitule: "Clients", classeNum: 4 },
+  { numero: "443100", intitule: "TVA collectée", classeNum: 4 },
+  { numero: "445660", intitule: "TVA déductible", classeNum: 4 },
+  { numero: "521000", intitule: "Banque", classeNum: 5 },
+  { numero: "601000", intitule: "Achats marchandises", classeNum: 6 },
+  { numero: "605100", intitule: "Eau", classeNum: 6 },
+  { numero: "605300", intitule: "Carburant", classeNum: 6 },
+  { numero: "701000", intitule: "Ventes marchandises", classeNum: 7 },
+  { numero: "706100", intitule: "Recette transport", classeNum: 7 },
+  { numero: "707000", intitule: "Ventes", classeNum: 7 },
+];
+
+export async function seedComptesStandards(dossierId: string): Promise<void> {
+  await prisma.compte.createMany({
+    data: COMPTES_STD.map((c) => ({ ...c, type: "DETAIL", reportNplus1: false, dossierId })),
+  });
+}
+
 /** Vide la base et reseed le référentiel + un dossier de test. Renvoie le dossierId. */
 export async function resetDb(): Promise<string> {
   await prisma.lettrage.deleteMany();

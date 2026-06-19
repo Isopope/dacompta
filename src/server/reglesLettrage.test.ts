@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
-import { resetDb } from "./test-helpers";
+import { resetDb, seedComptesStandards } from "./test-helpers";
 import { creerPiece } from "./pieces";
 import { getLettragesByDossier } from "./lettrage";
 import {
@@ -15,6 +15,7 @@ let journalId: string;
 
 beforeEach(async () => {
   dossierId = await resetDb();
+  await seedComptesStandards(dossierId);
   const j = await prisma.journal.create({
     data: { code: "OD", libelle: "Opérations diverses", dossierId },
   });

@@ -2,6 +2,7 @@
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { verifierEquilibre, verifierPieceNonVide, verifierSignesLigne } from "@/lib/comptabilite/integrite";
 
 export interface LignePieceInput {
   compteNumero: string;
@@ -25,10 +26,26 @@ const D = (n: number) => new Prisma.Decimal(n);
 export async function creerPiece(input: CreerPieceInput) {
   const lignes = input.lignes ?? [];
 
-  const totalDebit = lignes.reduce((s, l) => s.plus(D(l.debit)), D(0));
-  const totalCredit = lignes.reduce((s, l) => s.plus(D(l.credit)), D(0));
-  if (!totalDebit.equals(totalCredit)) {
-    throw new Error(`Pièce déséquilibrée : débit ${totalDebit} ≠ crédit ${totalCredit}.`);
+  // Devise du dossier (pour l'arrondi des invariants).
+  const dossier = await prisma.dossier.findUniqueOrThrow({
+    where: { id: input.dossierId }, select: { devise: true },
+  });
+
+  // Invariants métier (lèvent ErreurIntegrite sinon).
+  verifierPieceNonVide(lignes);
+  for (const l of lignes) verifierSignesLigne(l);
+  verifierEquilibre(lignes, dossier.devise);
+
+  // Résolution stricte des comptes → compteId (FK).
+  const comptes = await prisma.compte.findMany({
+    where: { dossierId: input.dossierId, numero: { in: lignes.map((l) => l.compteNumero) } },
+    select: { id: true, numero: true },
+  });
+  const parNumero = new Map(comptes.map((c) => [c.numero, c.id]));
+  for (const l of lignes) {
+    if (!parNumero.has(l.compteNumero)) {
+      throw new Error(`Compte inexistant dans ce dossier : ${l.compteNumero}.`);
+    }
   }
 
   // TVA = mouvements sur les comptes de TVA, quel que soit le sens :
@@ -40,6 +57,7 @@ export async function creerPiece(input: CreerPieceInput) {
   const totalTVA = lignes
     .filter((l) => estCompteTVA(l.compteNumero))
     .reduce((s, l) => s.plus(D(l.debit)).plus(D(l.credit)), D(0));
+  const totalDebit = lignes.reduce((s, l) => s.plus(D(l.debit)), D(0));
   const montantTTC = totalDebit;
   const montantTVA = totalTVA;
   const montantHT = montantTTC.minus(montantTVA);
@@ -56,6 +74,7 @@ export async function creerPiece(input: CreerPieceInput) {
       dossierId: input.dossierId,
       lignes: {
         create: lignes.map((l, i) => ({
+          compteId: parNumero.get(l.compteNumero)!,
           compteNumero: l.compteNumero,
           libelleLigne: l.libelleLigne,
           debit: D(l.debit),
