@@ -39,13 +39,26 @@ export interface ModifierPosteData {
 const D = (n: Prisma.Decimal.Value) => new Prisma.Decimal(n);
 
 // Réalisé d'un poste : somme (aggregate, sans charger toutes les lignes) des débits
-// (charge) ou crédits (produit) des comptes commençant par `compteLie`, hors pièces ANNULEE.
+// (charge) ou crédits (produit), hors pièces ANNULEE.
+//
+// `compteLie` sert à deux usages : compte exact pour un poste précis (ex. "601100")
+// ou préfixe pour un poste générique (ex. "605" → 605100, 605200, 605300…). On
+// privilégie donc la correspondance EXACTE : si une écriture porte sur le compte
+// `compteLie` lui-même, on n'agrège que ce compte. Sinon on retombe sur le préfixe.
 async function realisePoste(dossierId: string, sens: string, compteLie: string): Promise<number> {
+  const where: Prisma.LigneEcritureWhereInput = {
+    piece: { dossierId, statut: { not: "ANNULEE" } },
+  };
+  // Correspondance exacte d'abord (compte = compteLie), fallback préfixe si le
+  // compte exact n'apparaît dans aucune écriture du dossier.
+  const exactExists = await prisma.ligneEcriture.findFirst({
+    where: { ...where, compteNumero: compteLie },
+    select: { id: true },
+  });
+  where.compteNumero = exactExists ? compteLie : { startsWith: compteLie };
+
   const agg = await prisma.ligneEcriture.aggregate({
-    where: {
-      compteNumero: { startsWith: compteLie },
-      piece: { dossierId, statut: { not: "ANNULEE" } },
-    },
+    where,
     _sum: { debit: true, credit: true },
   });
   const colonne = sens === "P" ? agg._sum.credit : agg._sum.debit;

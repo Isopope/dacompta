@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DaCompta — Wireframes</title>
+<link rel="stylesheet" href="styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="shared.jsx"></script>
+<script type="text/babel" src="area1.jsx"></script>
+<script type="text/babel" src="area2.jsx"></script>
+<script type="text/babel" src="area3.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const AREAS = [
+  {
+    key: "arch", num: 1, tab: "Architecture & Dashboard",
+    h2: "Architecture de l'app & tableau de bord",
+    intro: "Comment l'app est organisée — navigation, et ce que l'utilisateur voit en arrivant. Trois philosophies de navigation distinctes.",
+    pistes: [
+      { lab: "A", title: "Portefeuille cabinet", desc: "navigation par dossiers, pensée multi-clients", comp: "Z1_A" },
+      { lab: "B", title: "Entreprise unique + barre ⌘K", desc: "une seule boîte pour chercher, agir & demander à l'IA", comp: "Z1_B" },
+      { lab: "C", title: "3 colonnes + copilote IA", desc: "rail assistant permanent, toujours là sans gêner", comp: "Z1_C" },
+    ],
+  },
+  {
+    key: "config", num: 2, tab: "Configuration zéro-config",
+    h2: "Configuration « zéro-config » du dossier SYSCOHADA",
+    intro: "Le point de douleur n°1 vs Sage : faire disparaître la phase de paramétrage. Trois manières de configurer un dossier en minutes, pas en jours.",
+    pistes: [
+      { lab: "A", title: "Assistant guidé (4 questions)", desc: "stepper avec valeurs intelligentes pré-remplies", comp: "Z2_A" },
+      { lab: "B", title: "Config conversationnelle", desc: "chat + aperçu live du plan comptable qui se construit", comp: "Z2_B" },
+      { lab: "C", title: "Galerie de modèles 1-clic", desc: "modèles prêts par pays × secteur (réalités locales)", comp: "Z2_C" },
+    ],
+  },
+  {
+    key: "ia", num: 3, tab: "Automatisation & IA",
+    h2: "Couche d'automatisation & assistant IA",
+    intro: "L'IA suggère, l'humain valide. Trois surfaces où l'automatisation s'insère sans retirer le contrôle au comptable.",
+    pistes: [
+      { lab: "A", title: "OCR → écriture à valider", desc: "pièce scannée à gauche, imputation proposée à droite", comp: "Z3_A" },
+      { lab: "B", title: "Assistant conversationnel", desc: "questions sur les comptes + actions à confirmer", comp: "Z3_B" },
+      { lab: "C", title: "Inbox « À vérifier »", desc: "anomalies & tâches IA à trier dans une seule file", comp: "Z3_C" },
+    ],
+  },
+];
+
+const FONTS = {
+  "Patrick Hand": "'Patrick Hand', cursive",
+  "Kalam": "'Kalam', cursive",
+  "Shantell Sans": "'Shantell Sans', cursive",
+};
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accent": "#0f766e",
+  "sketch": true,
+  "font": "Kalam",
+  "density": "Compact",
+  "annotations": true
+}/*EDITMODE-END*/;
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [area, setArea] = useState(0);
+  const [piste, setPiste] = useState(0);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty("--accent", t.accent);
+    document.documentElement.style.setProperty("--ui-font", FONTS[t.font] || FONTS["Patrick Hand"]);
+    document.body.classList.toggle("clean", !t.sketch);
+    document.body.classList.toggle("density-compact", t.density === "Compact");
+    document.body.classList.toggle("no-annot", !t.annotations);
+  }, [t]);
+
+  const A = AREAS[area];
+  const Comp = window[A.pistes[piste].comp];
+
+  return (
+    <React.Fragment>
+      <header className="gal-head">
+        <h1 className="gal-title">DaCompta — Wireframes</h1>
+        <div className="gal-sub">Comptabilité OHADA · basse fidélité · 3 zones × 3 pistes</div>
+      </header>
+
+      <nav className="tabbar">
+        <div className="tabbar-inner">
+          {AREAS.map((a, i) => (
+            <div key={a.key} className={"tab" + (i === area ? " active" : "")}
+                 onClick={() => { setArea(i); setPiste(0); }}>
+              <span className="num">{a.num}</span>{a.tab}
+            </div>
+          ))}
+          <div style={{ flex: 1 }} />
+          <span className="annotation annot small" style={{ alignSelf: "center" }}>↻ ajustez via le panneau Tweaks</span>
+        </div>
+      </nav>
+
+      <main className="area-wrap">
+        <div className="area-intro">
+          <div style={{ maxWidth: 720 }}>
+            <h2>{A.h2}</h2>
+            <div className="annotation annot">{A.intro}</div>
+          </div>
+        </div>
+
+        <div className="piste-tabs">
+          {A.pistes.map((p, i) => (
+            <div key={i} className={"ptab" + (i === piste ? " active" : "")} onClick={() => setPiste(i)}>
+              Piste {p.lab} <span className="lab">· {p.title}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="piste-head">
+          <span className="tagA b">Piste {A.pistes[piste].lab} — {A.pistes[piste].title}</span>
+          <span className="desc">{A.pistes[piste].desc}</span>
+        </div>
+
+        {Comp ? <Comp /> : <div className="card">…</div>}
+      </main>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Style" />
+        <TweakToggle label="Trait esquissé" value={t.sketch} onChange={(v) => setTweak("sketch", v)} />
+        <TweakSelect label="Police" value={t.font} options={Object.keys(FONTS)} onChange={(v) => setTweak("font", v)} />
+        <TweakColor label="Couleur d'accent" value={t.accent}
+          options={["#1f8a5b", "#c2410c", "#2563eb", "#7c3aed", "#0f766e"]}
+          onChange={(v) => setTweak("accent", v)} />
+        <TweakSection label="Mise en page" />
+        <TweakRadio label="Densité" value={t.density} options={["Confort", "Compact"]} onChange={(v) => setTweak("density", v)} />
+        <TweakToggle label="Annotations manuscrites" value={t.annotations} onChange={(v) => setTweak("annotations", v)} />
+      </TweaksPanel>
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

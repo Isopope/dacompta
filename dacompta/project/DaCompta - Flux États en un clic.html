@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DaCompta — Flux : États financiers en un clic</title>
+<link rel="stylesheet" href="styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  .flow-rail { width: 230px; flex: none; border-right: 2px solid var(--line); background: var(--paper); padding: 18px 14px; display: flex; flex-direction: column; gap: 4px; }
+  .flow-step { display: flex; align-items: center; gap: 11px; padding: 9px 10px; border-radius: 10px; cursor: pointer; color: var(--ink-2); }
+  .flow-step .b { width: 27px; height: 27px; border-radius: 50%; border: 2px solid var(--ink-3); display: grid; place-items: center; font-size: .85em; flex: none; background: var(--panel); }
+  .flow-step.active { background: var(--accent-soft); color: var(--ink); border: 1.5px solid var(--accent); }
+  .flow-step.active .b { border-color: var(--accent); color: var(--accent); }
+  .flow-step.done { color: var(--ink); }
+  .flow-step.done .b { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .flow-body { flex: 1; display: flex; flex-direction: column; }
+  .flow-content { flex: 1; padding: 24px 26px; }
+  .flow-foot { border-top: 2px dashed var(--ink-3); padding: 12px 24px; display: flex; align-items: center; gap: 12px; }
+  .sage-ribbon { display: flex; align-items: flex-start; gap: 10px; max-width: 1180px; margin: 0 auto 14px; padding: 10px 16px; border: 2px dashed var(--danger); border-radius: 12px; background: color-mix(in srgb, var(--danger) 7%, white); }
+  .sage-ribbon .tag { flex: none; font-size: .78em; padding: 2px 9px; border-radius: 200px; background: var(--danger); color: #fff; }
+  body.no-annot .sage-ribbon { display: none; }
+  .etatcard { display: flex; flex-direction: column; gap: 6px; cursor: pointer; }
+  .etatcard.on { border-color: var(--accent); background: var(--accent-soft); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="shared.jsx"></script>
+<script type="text/babel" src="etats-un-clic.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+const FONTS = { "Patrick Hand": "'Patrick Hand', cursive", "Kalam": "'Kalam', cursive", "Shantell Sans": "'Shantell Sans', cursive" };
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{ "accent":"#0f766e","sketch":true,"font":"Kalam","density":"Compact","annotations":true }/*EDITMODE-END*/;
+
+function EtatsFlowApp() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [step, setStep] = useState(0);
+  const [sel, setSel] = useState("bilan");
+  useEffect(() => {
+    document.documentElement.style.setProperty("--accent", t.accent);
+    document.documentElement.style.setProperty("--ui-font", FONTS[t.font] || FONTS["Patrick Hand"]);
+    document.body.classList.toggle("clean", !t.sketch);
+    document.body.classList.toggle("density-compact", t.density === "Compact");
+    document.body.classList.toggle("no-annot", !t.annotations);
+  }, [t]);
+
+  const S = ETATS_STEPS[step];
+  const Comp = S.comp;
+  const last = ETATS_STEPS.length - 1;
+
+  return (
+    <React.Fragment>
+      <header className="gal-head">
+        <h1 className="gal-title">Flux — États financiers en un clic</h1>
+        <div className="gal-sub">Stade Restitution · des écritures au bilan, CR, TAFIRE · PDF/Excel format SYSCOHADA · Les Associés SA</div>
+      </header>
+      <main className="area-wrap" style={{ paddingTop: 14 }}>
+        <div className="sage-ribbon annotation">
+          <span className="tag">vs retraitement</span>
+          <span className="annot" style={{ fontSize: "1.15em", color: "var(--ink-2)" }}>{S.note}</span>
+        </div>
+        <Win title={"DaCompta — États financiers · exercice 2020 · étape " + (step + 1) + "/" + ETATS_STEPS.length}>
+          <div className="flex center g12" style={{ padding: "10px 16px", borderBottom: "2px dashed var(--ink-3)", background: "var(--paper)" }}>
+            <span className="small b">Module</span>
+            <span className="chip">États & documents</span>
+            <span className="chip accent">Exercice 2020</span>
+            <span className="annotation annot small">généré depuis le grand livre, en temps réel</span>
+          </div>
+          <div className="flex" style={{ minHeight: 520 }}>
+            <nav className="flow-rail">
+              <div className="muted small" style={{ margin: "0 8px 8px" }}>ÉTATS EN UN CLIC</div>
+              {ETATS_STEPS.map((s, i) => (
+                <div key={i} className={"flow-step" + (i === step ? " active" : i < step ? " done" : "")} onClick={() => setStep(i)}>
+                  <span className="b">{i < step ? "✓" : i + 1}</span><span>{s.label}</span>
+                </div>
+              ))}
+              <div style={{ flex: 1 }} />
+              <div className="card fill" style={{ padding: 10, gap: 6 }}>
+                <div className="flex center g8"><span className="chip ai">✦</span><span className="small b">Source unique</span></div>
+                <span className="muted small">Un seul jeu de chiffres : états, liasse, FEC concordent.</span>
+              </div>
+            </nav>
+            <div className="flow-body">
+              <div className="flow-content"><Comp sel={sel} setSel={setSel} /></div>
+              <div className="flow-foot">
+                <Btn onClick={() => setStep(Math.max(0, step - 1))}>← Retour</Btn>
+                <span className="muted small">Étape {step + 1} sur {ETATS_STEPS.length}</span>
+                <div className="grow" style={{ flex: 1 }} />
+                {step < last ? <span className="btn primary" onClick={() => setStep(step + 1)}>Continuer →</span> : <span className="btn primary" onClick={() => setStep(0)}>Recommencer ↺</span>}
+              </div>
+            </div>
+          </div>
+        </Win>
+        <div style={{ textAlign: "center", marginTop: 14 }} className="annotation">
+          <span className="note">Écritures → état choisi → export PDF/Excel : fini le retraitement de fin d'année</span>
+        </div>
+        <div className="flex center g10" style={{ justifyContent: "center", marginTop: 18, flexWrap: "wrap" }}>
+          <a className="btn" href="DaCompta - Fonctionnalités à intégrer.html">← Analyse</a>
+          <a className="btn" href="DaCompta - Module Etats et documents.html">Module États & documents →</a>
+          <a className="btn" href="DaCompta - Flux Export FEC.html">Export FEC →</a>
+        </div>
+      </main>
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Style" />
+        <TweakToggle label="Trait esquissé" value={t.sketch} onChange={(v) => setTweak("sketch", v)} />
+        <TweakSelect label="Police" value={t.font} options={Object.keys(FONTS)} onChange={(v) => setTweak("font", v)} />
+        <TweakColor label="Couleur d'accent" value={t.accent} options={["#0f766e", "#1f8a5b", "#c2410c", "#2563eb", "#7c3aed"]} onChange={(v) => setTweak("accent", v)} />
+        <TweakSection label="Mise en page" />
+        <TweakRadio label="Densité" value={t.density} options={["Confort", "Compact"]} onChange={(v) => setTweak("density", v)} />
+        <TweakToggle label="Annotations & comparaison" value={t.annotations} onChange={(v) => setTweak("annotations", v)} />
+      </TweaksPanel>
+    </React.Fragment>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<EtatsFlowApp />);
+</script>
+</body>
+</html>

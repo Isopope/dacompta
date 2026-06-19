@@ -13,7 +13,9 @@
       "Bash(git commit *)",
       "Bash(npx vitest *)",
       "Bash(npx tsc *)",
-      "Bash(node --input-type=module --experimental-strip-types)"
+      "Bash(node --input-type=module --experimental-strip-types)",
+      "Bash(~/.claude/skills/gstack/bin/gstack-developer-profile --log-session '{\"date\":\"2026-06-19T02:30:00Z\",\"mode\":\"startup\",\"project_slug\":\"dacompte\",\"signal_count\":5,\"signals\":[\"real_problem\",\"pushback\",\"domain_expertise\",\"agency\",\"solves_problem_others_need\"],\"design_doc\":\"/c/Users/DELL/.gstack/projects/dacompte/Isopope-feat-plan-comptable-design-20260619-022149.md\",\"assignment\":\"Lister 10 formateurs/centres \\(Togo prioritaire\\), en contacter 5 cette semaine pour obtenir un engagement d usage + une reponse sur le payeur.\",\"resources_shown\":[],\"topics\":[\"syscohada\",\"comptabilite-pedagogique\",\"mobile-money\"]}')",
+      "Bash(~/.claude/skills/gstack/bin/gstack-builder-profile)"
     ]
   },
   "hooks": {

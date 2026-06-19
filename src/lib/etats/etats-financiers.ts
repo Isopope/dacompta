@@ -6,7 +6,8 @@ import type { BalanceLigne, BalanceResultat, GrandLivreCompte } from "@/server/b
 export interface PosteEtat {
   compteNumero: string;
   intitule: string;
-  montant: number;
+  montant: number; // exercice N
+  montantNMoins1: number; // exercice N-1 (ouverture du compte), signé comme `montant`
 }
 
 export interface Bilan {
@@ -24,13 +25,20 @@ export interface CompteResultat {
   totalCharges: number;
   totalProduits: number;
   resultatNet: number; // > 0 = bénéfice, < 0 = perte
+  totalChargesNMoins1: number; // exercice N-1 (snapshot)
+  totalProduitsNMoins1: number;
+  resultatNetNMoins1: number; // produits − charges, exercice N-1
 }
 
 const arrondi = (n: number) => Math.round(n * 100) / 100;
-const poste = (l: BalanceLigne, montant: number): PosteEtat => ({
+// `sens` aligne le signe du N-1 sur celui du montant N :
+//  +1 pour un poste débiteur (actif, charge), −1 pour un poste créditeur (passif, produit).
+// L'ouverture est signée débit − crédit ; on la projette dans la même convention.
+const poste = (l: BalanceLigne, montant: number, sens: 1 | -1): PosteEtat => ({
   compteNumero: l.compteNumero,
   intitule: l.intitule,
   montant: arrondi(montant),
+  montantNMoins1: arrondi(sens * l.soldeNMoins1),
 });
 
 /**
@@ -38,21 +46,29 @@ const poste = (l: BalanceLigne, montant: number): PosteEtat => ({
  * résultat net = produits − charges.
  */
 export function deriverCompteResultat(balance: BalanceResultat): CompteResultat {
+  // On retient un compte dès qu'il a une activité N OU un réalisé N-1 (snapshot),
+  // pour que la comparaison N / N-1 reste complète même si un poste n'a bougé
+  // que l'an dernier (ou que cette année).
   const charges = balance.lignes
-    .filter((l) => l.classeNum === 6 && l.soldeDebiteur - l.soldeCrediteur !== 0)
-    .map((l) => poste(l, l.soldeDebiteur - l.soldeCrediteur));
+    .filter((l) => l.classeNum === 6 && (l.soldeDebiteur - l.soldeCrediteur !== 0 || l.soldeNMoins1 !== 0))
+    .map((l) => poste(l, l.soldeDebiteur - l.soldeCrediteur, 1));
   const produits = balance.lignes
-    .filter((l) => l.classeNum === 7 && l.soldeCrediteur - l.soldeDebiteur !== 0)
-    .map((l) => poste(l, l.soldeCrediteur - l.soldeDebiteur));
+    .filter((l) => l.classeNum === 7 && (l.soldeCrediteur - l.soldeDebiteur !== 0 || l.soldeNMoins1 !== 0))
+    .map((l) => poste(l, l.soldeCrediteur - l.soldeDebiteur, -1));
 
   const totalCharges = arrondi(charges.reduce((s, p) => s + p.montant, 0));
   const totalProduits = arrondi(produits.reduce((s, p) => s + p.montant, 0));
+  const totalChargesNMoins1 = arrondi(charges.reduce((s, p) => s + p.montantNMoins1, 0));
+  const totalProduitsNMoins1 = arrondi(produits.reduce((s, p) => s + p.montantNMoins1, 0));
   return {
     charges,
     produits,
     totalCharges,
     totalProduits,
     resultatNet: arrondi(totalProduits - totalCharges),
+    totalChargesNMoins1,
+    totalProduitsNMoins1,
+    resultatNetNMoins1: arrondi(totalProduitsNMoins1 - totalChargesNMoins1),
   };
 }
 
@@ -71,10 +87,10 @@ export function deriverCompteResultat(balance: BalanceResultat): CompteResultat 
 export function deriverBilan(balance: BalanceResultat): Bilan {
   const actif = balance.lignes
     .filter((l) => [2, 3, 4, 5].includes(l.classeNum) && l.soldeDebiteur > 0)
-    .map((l) => poste(l, l.soldeDebiteur));
+    .map((l) => poste(l, l.soldeDebiteur, 1));
   const passif = balance.lignes
     .filter((l) => [1, 4, 5].includes(l.classeNum) && l.soldeCrediteur > 0)
-    .map((l) => poste(l, l.soldeCrediteur));
+    .map((l) => poste(l, l.soldeCrediteur, -1));
 
   const resultatNet = deriverCompteResultat(balance).resultatNet;
   const totalActif = arrondi(actif.reduce((s, p) => s + p.montant, 0));
@@ -121,8 +137,10 @@ export interface FluxTresorerie {
   tresorerieCloture: number;
 }
 
-// Flux entrant net d'un compte : crédité = entrée (+), débité = sortie (−).
-const fluxNet = (l: BalanceLigne) => l.soldeCrediteur - l.soldeDebiteur;
+// Flux net de la période seulement — les soldes d'ouverture RAN sont déjà
+// comptés dans tresorerieOuverture. Les utiliser ici les compterait deux fois.
+// crédité = entrée (+), débité = sortie (−).
+const fluxNetPeriode = (l: BalanceLigne) => l.credit - l.debit;
 // Comptes de trésorerie active : disponibilités banque (52) et caisse (57).
 const estTresorerie = (numero: string) => numero.startsWith("52") || numero.startsWith("57");
 // Postes du besoin en fonds de roulement d'exploitation (créances/dettes courantes).
@@ -149,13 +167,13 @@ export function deriverFluxTresorerie(
   const exploitation = categorie([
     ...balance.lignes
       .filter((l) => l.classeNum === 7)
-      .map((l) => ({ libelle: `Encaissements — ${l.intitule} (${l.compteNumero})`, montant: fluxNet(l) })),
+      .map((l) => ({ libelle: `Encaissements — ${l.intitule} (${l.compteNumero})`, montant: fluxNetPeriode(l) })),
     ...balance.lignes
       .filter((l) => l.classeNum === 6)
-      .map((l) => ({ libelle: `Décaissements — ${l.intitule} (${l.compteNumero})`, montant: fluxNet(l) })),
+      .map((l) => ({ libelle: `Décaissements — ${l.intitule} (${l.compteNumero})`, montant: fluxNetPeriode(l) })),
     ...balance.lignes
       .filter((l) => estBFRE(l.compteNumero))
-      .map((l) => ({ libelle: `Variation BFRE — ${l.intitule} (${l.compteNumero})`, montant: fluxNet(l) })),
+      .map((l) => ({ libelle: `Variation BFRE — ${l.intitule} (${l.compteNumero})`, montant: fluxNetPeriode(l) })),
   ]);
 
   // B. Investissement : acquisitions (débit, −) et cessions (crédit, +) d'immobilisations (classe 2).
@@ -163,8 +181,8 @@ export function deriverFluxTresorerie(
     balance.lignes
       .filter((l) => l.classeNum === 2)
       .map((l) => ({
-        libelle: `${fluxNet(l) < 0 ? "Acquisition" : "Cession"} — ${l.intitule} (${l.compteNumero})`,
-        montant: fluxNet(l),
+        libelle: `${fluxNetPeriode(l) < 0 ? "Acquisition" : "Cession"} — ${l.intitule} (${l.compteNumero})`,
+        montant: fluxNetPeriode(l),
       }))
   );
 
@@ -175,9 +193,9 @@ export function deriverFluxTresorerie(
       .map((l) => {
         const emprunt = l.compteNumero.startsWith("162");
         const libelle = emprunt
-          ? `${fluxNet(l) >= 0 ? "Nouvel emprunt" : "Remboursement d'emprunt"} — ${l.intitule} (${l.compteNumero})`
+          ? `${fluxNetPeriode(l) >= 0 ? "Nouvel emprunt" : "Remboursement d'emprunt"} — ${l.intitule} (${l.compteNumero})`
           : `Augmentation de capital — ${l.intitule} (${l.compteNumero})`;
-        return { libelle, montant: fluxNet(l) };
+        return { libelle, montant: fluxNetPeriode(l) };
       })
   );
 

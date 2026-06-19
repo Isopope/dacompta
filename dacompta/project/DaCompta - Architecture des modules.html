@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DaCompta — Architecture des modules</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  :root { --accent:#0f766e; }
+  body { background:var(--paper); }
+  .wrap { max-width:1280px; margin:0 auto; padding:28px 26px 100px; }
+  .h1 { font-size:2.3em; margin:0; }
+  .sub { font-family:var(--note-font); font-size:1.5em; color:var(--ink-2); margin:2px 0 16px; }
+
+  .legend { display:flex; gap:14px; flex-wrap:wrap; padding:12px 16px; border:2px dashed var(--ink-3); border-radius:12px; margin-bottom:18px; background:var(--panel); }
+  .lg { display:inline-flex; align-items:center; gap:7px; font-size:.92em; }
+  .gl { font-family:'Space Mono',monospace; font-weight:700; width:20px; text-align:center; }
+  .gl.her{color:#2563eb} .gl.comp{color:var(--accent)} .gl.agg{color:var(--accent)} .gl.gen{color:#c2410c} .gl.dep{color:var(--ink-3)}
+
+  .flow { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  .flow .ph { flex:1; min-width:120px; text-align:center; padding:8px; border:2px solid var(--line); border-radius:200px; background:var(--accent-soft); font-weight:700; }
+  .flow .ar { font-family:'Space Mono',monospace; color:#c2410c; font-weight:700; }
+  .loop { text-align:center; font-family:var(--note-font); color:#c2410c; font-size:1.2em; margin:-4px 0 16px; }
+
+  .cols { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; align-items:start; }
+  .col-h { font-weight:700; font-size:1.05em; padding:6px 10px; border-bottom:2px solid var(--line); margin-bottom:10px; }
+  .col-h .k { font-family:var(--note-font); color:var(--ink-3); font-size:.9em; display:block; }
+  .node { display:block; text-decoration:none; color:inherit; border:2px solid var(--line); border-radius:200px 14px 200px 14px / 14px 200px 14px 200px; background:var(--panel); padding:11px 13px; margin-bottom:11px; }
+  .node:hover { background:var(--accent-soft); }
+  .node.core { border-color:var(--accent); border-width:2.5px; }
+  .node .t { font-weight:700; font-size:1.02em; }
+  .node .t .sm { font-weight:400; color:var(--ink-3); font-size:.82em; }
+  .rel { display:flex; gap:6px; align-items:baseline; font-size:.82em; color:var(--ink-2); margin-top:3px; }
+  .rel .g { font-family:'Space Mono',monospace; font-weight:700; flex:none; }
+  .g.her{color:#2563eb} .g.comp{color:var(--accent)} .g.agg{color:var(--accent)} .g.gen{color:#c2410c} .g.dep{color:var(--ink-3)}
+
+  .band { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:18px; }
+  .band .node { border-style:dashed; border-radius:14px; }
+
+  .model { margin-top:26px; border:2px solid var(--line); border-radius:14px; background:var(--panel); padding:18px 20px; }
+  .model h2 { margin:0 0 8px; font-size:1.3em; }
+  .model pre { font-family:'Space Mono',monospace; font-size:.82em; line-height:1.7; color:var(--ink); background:var(--paper); border:1.5px dashed var(--ink-3); border-radius:10px; padding:14px; overflow-x:auto; white-space:pre; margin:8px 0 0; }
+  .note-foot { font-family:var(--note-font); font-size:1.25em; color:var(--accent); text-align:center; margin-top:18px; }
+  @media (max-width:1000px){ .cols{grid-template-columns:repeat(2,1fr)} .band{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 class="h1">Architecture des modules</h1>
+  <div class="sub">Comment tout s'agence — dans l'ordre comptable · relations typées (UML)</div>
+
+  <div class="legend">
+    <span class="lg"><span class="gl her">▷</span> Héritage — « est un »</span>
+    <span class="lg"><span class="gl comp">◆</span> Composition — « composé de »</span>
+    <span class="lg"><span class="gl agg">◇</span> Agrégation — « référence / regroupe »</span>
+    <span class="lg"><span class="gl gen">⤳</span> Génère / alimente</span>
+    <span class="lg"><span class="gl dep">⊃</span> Dépend de (prérequis)</span>
+  </div>
+
+  <div class="flow">
+    <span class="ph">1 · Configuration</span><span class="ar">⤳</span>
+    <span class="ph">2 · Saisie</span><span class="ar">⤳</span>
+    <span class="ph">3 · Restitution</span><span class="ar">⤳</span>
+    <span class="ph">4 · Clôture</span>
+  </div>
+  <div class="loop">↩ la clôture génère le report à nouveau du nouvel exercice → reboucle sur la Configuration N+1</div>
+
+  <div class="cols">
+    <!-- 1 CONFIGURATION -->
+    <div>
+      <div class="col-h">1 · Configuration <span class="k">le socle, prérequis</span></div>
+      <a class="node core" href="DaCompta - Flux Création société.html">
+        <div class="t">Dossier / Société <span class="sm">racine</span></div>
+        <div class="rel"><span class="g dep">⊃</span><span>référentiel du pays (OHADA / IFRS)</span></div>
+      </a>
+      <a class="node core" href="DaCompta - Flux Plan comptable.html">
+        <div class="t">Plan comptable</div>
+        <div class="rel"><span class="g comp">◆</span><span>Comptes (Détail / Total) · Natures</span></div>
+        <div class="rel"><span class="g dep">⊃</span><span>référentiel du Dossier</span></div>
+      </a>
+      <a class="node" href="DaCompta - Flux Structure comptable.html">
+        <div class="t">Tiers <span class="sm">auxiliaire</span></div>
+        <div class="rel"><span class="g agg">◇</span><span>rattaché à un compte collectif (40/41/42)</span></div>
+      </a>
+      <a class="node" href="DaCompta - Flux Structure comptable.html">
+        <div class="t">Analytique</div>
+        <div class="rel"><span class="g comp">◆</span><span>Axe composé de Sections (bus, chantier…)</span></div>
+      </a>
+      <a class="node" href="DaCompta - Flux Structure comptable.html">
+        <div class="t">Journaux</div>
+        <div class="rel"><span class="g her">▷</span><span>ACH, VT, CAI, BIMA, OD, PE, RAN… ⟶ Journal(Type)</span></div>
+        <div class="rel"><span class="g agg">◇</span><span>trésorerie → compte 5xx</span></div>
+      </a>
+      <a class="node" href="DaCompta - Flux Budget de fonctionnement.html">
+        <div class="t">Budget</div>
+        <div class="rel"><span class="g comp">◆</span><span>Postes</span></div>
+        <div class="rel"><span class="g agg">◇</span><span>poste lié à un Compte</span></div>
+      </a>
+    </div>
+
+    <!-- 2 SAISIE -->
+    <div>
+      <div class="col-h">2 · Saisie <span class="k">les opérations</span></div>
+      <div class="node core">
+        <div class="t">Pièce comptable <span class="sm">entité centrale</span></div>
+        <div class="rel"><span class="g comp">◆</span><span>Lignes d'écriture (débit / crédit)</span></div>
+        <div class="rel"><span class="g agg">◇</span><span>saisie dans un Journal · ligne → Compte (+ Tiers + Section)</span></div>
+      </div>
+      <a class="node" href="DaCompta - Flux Saisie bilan d'ouverture.html">
+        <div class="t">Bilan d'ouverture</div>
+        <div class="rel"><span class="g her">▷</span><span>une Pièce (journal RAN)</span></div>
+      </a>
+      <a class="node core" href="DaCompta - Flux Imputation des pièces.html">
+        <div class="t">Imputation (Inbox / OCR / IA)</div>
+        <div class="rel"><span class="g gen">⤳</span><span>génère des Pièces</span></div>
+        <div class="rel"><span class="g dep">⊃</span><span>Plan, Tiers, Sections, règles fiscales</span></div>
+      </a>
+      <a class="node" href="DaCompta - Flux Écriture d'abonnement.html">
+        <div class="t">Abonnement</div>
+        <div class="rel"><span class="g gen">⤳</span><span>écritures récurrentes (OD / 476)</span></div>
+      </a>
+      <a class="node" href="DaCompta - Flux Régularisation TVA.html">
+        <div class="t">Régularisation TVA</div>
+        <div class="rel"><span class="g gen">⤳</span><span>une Pièce (OD)</span></div>
+        <div class="rel"><span class="g dep">⊃</span><span>soldes comptes 443 / 445</span></div>
+      </a>
+    </div>
+
+    <!-- 3 RESTITUTION -->
+    <div>
+      <div class="col-h">3 · Restitution <span class="k">généré depuis les écritures</span></div>
+      <a class="node" href="DaCompta - Flux Révision & Clôture.html">
+        <div class="t">Lettrage</div>
+        <div class="rel"><span class="g dep">⊃</span><span>écritures de Tiers (≡ balance âgée fiable)</span></div>
+      </a>
+      <a class="node core" href="DaCompta - Module Etats et documents.html">
+        <div class="t">Balances</div>
+        <div class="rel"><span class="g her">▷</span><span>générale · tiers · analytique · âgée</span></div>
+        <div class="rel"><span class="g gen">⤳</span><span>agrège les écritures</span></div>
+      </a>
+      <a class="node" href="DaCompta - Module Etats et documents.html">
+        <div class="t">Grand livre / Livre-journal</div>
+        <div class="rel"><span class="g gen">⤳</span><span>depuis les écritures</span></div>
+      </a>
+      <a class="node core" href="DaCompta - Module Etats et documents.html">
+        <div class="t">États financiers SYSCOHADA</div>
+        <div class="rel"><span class="g her">▷</span><span>Bilan · Résultat · TAFIRE · Notes</span></div>
+        <div class="rel"><span class="g gen">⤳</span><span>depuis la Balance</span></div>
+      </a>
+      <a class="node" href="DaCompta - Module Etats et documents.html">
+        <div class="t">Déclarations</div>
+        <div class="rel"><span class="g her">▷</span><span>TVA · DSF · CNSS · IGR</span></div>
+        <div class="rel"><span class="g gen">⤳</span><span>depuis états & écritures</span></div>
+      </a>
+    </div>
+
+    <!-- 4 CLÔTURE -->
+    <div>
+      <div class="col-h">4 · Clôture <span class="k">le cycle</span></div>
+      <a class="node core" href="DaCompta - Flux Révision & Clôture.html">
+        <div class="t">Révision & Clôture</div>
+        <div class="rel"><span class="g dep">⊃</span><span>consomme États + Lettrage</span></div>
+        <div class="rel"><span class="g gen">⤳</span><span>Pièce d'ouverture RAN de N+1</span></div>
+      </a>
+      <div class="node" style="border-style:dashed;">
+        <div class="t"><span class="sm">↩ boucle</span></div>
+        <div class="rel"><span class="g gen">⤳</span><span>réalimente la Configuration / Saisie de l'exercice suivant</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRANSVERSE -->
+  <div class="col-h" style="margin-top:22px;">Transverse <span class="k" style="display:inline">— au-dessus de toutes les phases</span></div>
+  <div class="band">
+    <a class="node" href="DaCompta - Navigation globale.html">
+      <div class="t">Navigation globale (coque)</div>
+      <div class="rel"><span class="g comp">◆</span><span>contient tous les modules</span></div>
+    </a>
+    <a class="node" href="DaCompta - Collaborateur Ma journee.html">
+      <div class="t">Cockpit « Ma journée »</div>
+      <div class="rel"><span class="g agg">◇</span><span>agrège pièces à traiter · échéances · anomalies</span></div>
+    </a>
+    <div class="node">
+      <div class="t">Copilote IA</div>
+      <div class="rel"><span class="g dep">⊃</span><span>assiste imputation, anomalies, régul., échéances</span></div>
+    </div>
+  </div>
+
+  <!-- MODÈLE DE DONNÉES -->
+  <div class="model">
+    <h2>Modèle de données — entités & relations (pour le dev)</h2>
+    <pre>Dossier 1 ─*&gt; Exercice
+Dossier 1 ─*&gt; Compte        (Plan comptable)      ◆ composition
+Dossier 1 ─*&gt; Journal                              ◆ composition
+Dossier 1 ─*&gt; Tiers                                ◆ composition
+Dossier 1 ─*&gt; AxeAnalytique 1 ─*&gt; Section          ◆ composition
+Dossier 1 ─*&gt; Poste (Budget)                       ◆ composition
+
+Journal  &lt;|── ACH · VT · CAI · BIMA · BTCI · OD · PE · RAN   ▷ héritage (par Type)
+
+Pièce    1 ─*&gt; Ligne                               ◆ composition
+Pièce    *─1  Journal                              ◇ agrégation
+Ligne    *─1  Compte                               ◇ agrégation
+Ligne    0..1 Tiers                                ◇ agrégation
+Ligne    0..1 Section                              ◇ agrégation
+Tiers    *─1  Compte collectif (40/41/42)          ◇ agrégation
+Poste    *─1  Compte                               ◇ agrégation
+
+Imputation        ┄⤳ Pièce         (génère)
+Abonnement        ┄⤳ Pièce (OD)    (génère)
+RégularisationTVA ┄⤳ Pièce (OD)    (génère, ⊃ soldes 443/445)
+Balance · GrandLivre · ÉtatFinancier · Déclaration  =  vues dérivées des Écritures (⤳)
+Lettrage          : opère sur Écritures de Tiers (⊃ pour balance âgée)
+Clôture           ┄⤳ Pièce RAN(N+1)  ↩ reboucle</pre>
+  </div>
+
+  <div class="note-foot">Une relation vous semble fausse ? Dites-le — cette carte est la colonne vertébrale de la doc dev & des tutoriels.</div>
+</div>
+</body>
+</html>

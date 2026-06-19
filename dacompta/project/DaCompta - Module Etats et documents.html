@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DaCompta — États & documents</title>
+<link rel="stylesheet" href="styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  .cat { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:9px; cursor:pointer; color:var(--ink-2); }
+  .cat.on { background:var(--accent-soft); color:var(--ink); border:1.5px solid var(--accent); }
+  .cat .ct { font-size:.7em; padding:0 7px; }
+  .docrow { display:flex; align-items:center; gap:12px; padding:11px 4px; border-bottom:1.5px dashed var(--fill-2); }
+  .docrow:last-child { border-bottom:none; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="shared.jsx"></script>
+<script type="text/babel">
+const { useState, useEffect } = React;
+const FONTS = { "Patrick Hand": "'Patrick Hand', cursive", "Kalam": "'Kalam', cursive", "Shantell Sans": "'Shantell Sans', cursive" };
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{ "accent":"#0f766e","sketch":true,"font":"Kalam","density":"Compact","annotations":true }/*EDITMODE-END*/;
+
+// catégories → documents [nom, desc, statut ('ok' prêt | 'soon' à venir)]
+const CATS = [
+  ["Balances", "▦", [
+    ["Balance générale", "6 colonnes · ouverture, mouvements, solde", "ok"],
+    ["Balance des tiers", "clients & fournisseurs nominatifs", "ok"],
+    ["Balance âgée", "dettes/créances par tranches de retard", "ok"],
+    ["Balance analytique", "rentabilité par section (bus, chantier…)", "ok"],
+  ]],
+  ["Grand livre & journaux", "▤", [
+    ["Grand livre général", "tous les mouvements par compte", "soon"],
+    ["Grand livre auxiliaire", "détail par tiers", "soon"],
+    ["Livre-journal", "journal général chronologique (légal)", "soon"],
+    ["Brouillard", "contrôle d'un journal avant validation", "ok"],
+  ]],
+  ["États financiers SYSCOHADA", "▥", [
+    ["Bilan", "Système Normal · Actif = Passif", "ok"],
+    ["Compte de résultat", "charges / produits · résultat net", "ok"],
+    ["TAFIRE / Flux de trésorerie", "tableau des ressources et emplois", "soon"],
+    ["Notes annexes", "états annexés à la liasse", "soon"],
+  ]],
+  ["Fiscal & social", "%", [
+    ["Déclaration TVA", "liquidation mensuelle · télédéclaration", "soon"],
+    ["Liasse DSF", "déclaration statistique & fiscale (annuelle)", "soon"],
+    ["Déclaration CNSS", "cotisations sociales", "soon"],
+    ["État IGR / salaires", "retenues à la source", "soon"],
+  ]],
+  ["Tiers & relances", "👥", [
+    ["Relevé de compte tiers", "à envoyer au client / fournisseur", "soon"],
+    ["Échéancier", "encaissements & décaissements à venir", "soon"],
+    ["Lettres de relance", "depuis la balance âgée", "soon"],
+  ]],
+  ["Immobilisations", "▦", [
+    ["Fichier des immobilisations", "inventaire des actifs", "soon"],
+    ["Tableau d'amortissement", "dotations par exercice", "soon"],
+  ]],
+];
+
+function EtatsModule() {
+  const [cat, setCat] = useState(0);
+  const [doc, setDoc] = useState("Balance générale");
+  const c = CATS[cat];
+  return (
+    <div className="appframe" style={{ maxWidth: 1180, margin: "0 auto" }}>
+      <div className="win-bar"><div className="dots"><i/><i/><i/></div><span className="small muted">DaCompta — LES ASSOCIÉS SA · États & documents</span><div className="grow" style={{flex:1}}/><span className="chip fill" style={{fontSize:".78em"}}>Exercice 2020 ▾</span></div>
+      <div className="app threecol" style={{ "--side-w":"230px", "--rail-w":"300px", "--app-h":"600px" }}>
+        {/* catégories */}
+        <aside className="side">
+          <div className="flex center g8" style={{margin:"2px 4px 8px"}}><span className="b">Catégories</span></div>
+          {CATS.map((x,i)=>(
+            <div key={i} className={"cat"+(i===cat?" on":"")} onClick={()=>setCat(i)}>
+              <span className="ico" style={{width:20,textAlign:"center"}}>{x[1]}</span>
+              <span style={{flex:1,lineHeight:1.05}}>{x[0]}</span>
+              <span className="chip fill ct">{x[2].length}</span>
+            </div>
+          ))}
+          <div style={{flex:1}}/>
+          <div className="card fill small" style={{padding:10}}>Conformes SYSCOHADA révisé · multi-pays</div>
+        </aside>
+
+        {/* liste documents */}
+        <div className="main">
+          <div className="flex center g10">
+            <span className="b" style={{fontSize:"1.15em"}}>{c[0]}</span>
+            <div className="grow"/>
+            <span className="chip fill">Période : Janvier 2020 ▾</span>
+          </div>
+          <Card style={{padding:"4px 14px"}}>
+            {c[2].map((d,i)=>(
+              <div key={i} className="docrow">
+                <span className="icon-sq">{d[2]==="ok"?"▥":"◌"}</span>
+                <div className="col grow"><span className="b">{d[0]}</span><span className="muted small">{d[1]}</span></div>
+                {d[2]==="ok"
+                  ? <><span className="chip accent" style={{fontSize:".7em"}}>prêt</span><span className="btn sm" style={{cursor:"pointer"}} onClick={()=>setDoc(d[0])}>Aperçu</span><span className="btn primary sm">Générer</span></>
+                  : <><span className="chip" style={{fontSize:".7em"}}>à venir</span><span className="btn ghost sm">Notifier</span></>}
+              </div>
+            ))}
+          </Card>
+          <div className="flex center g8">
+            <Annot>Tous les documents vitaux au même endroit — plus besoin d'une appli séparée</Annot>
+            <div className="grow"/>
+            <span className="chip fill small">⬇ PDF</span><span className="chip fill small">⬇ Excel</span><span className="chip ai small">✦ Télédéclaration</span>
+          </div>
+        </div>
+
+        {/* aperçu */}
+        <aside className="rail" style={{background:"var(--paper)", borderLeft:"2px solid var(--line)"}}>
+          <div className="flex center g8"><span className="b">Aperçu — {doc}</span></div>
+          <div className="card" style={{padding:12, flex:1}}>
+            <div className="small muted mono" style={{textAlign:"center"}}>LES ASSOCIÉS SA — Janvier 2020</div>
+            <div className="b" style={{textAlign:"center", marginTop:2}}>{doc}</div>
+            <table className="tbl" style={{marginTop:8}}>
+              <thead><tr><th>Compte</th><th className="num">Débit</th><th className="num">Crédit</th></tr></thead>
+              <tbody>
+                {[["101300","","50 000 000"],["245100","46 150 000",""],["401100","","..."],["521100","..",""],["571100","..",""]].map((r,i)=>(
+                  <tr key={i}><td className="mono small">{r[0]}</td><td className="num mono small">{r[1]}</td><td className="num mono small">{r[2]}</td></tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="ln w80" style={{marginTop:10}}/><div className="ln w60" style={{marginTop:6}}/>
+          </div>
+          <div className="flex g8"><span className="btn primary sm" style={{flex:1,justifyContent:"center"}}>Générer & exporter</span></div>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function App(){
+  const [t,setTweak]=useTweaks(TWEAK_DEFAULTS);
+  useEffect(()=>{ document.documentElement.style.setProperty("--accent",t.accent); document.documentElement.style.setProperty("--ui-font",FONTS[t.font]||FONTS["Patrick Hand"]); document.body.classList.toggle("clean",!t.sketch); document.body.classList.toggle("density-compact",t.density==="Compact"); document.body.classList.toggle("no-annot",!t.annotations); },[t]);
+  return (<React.Fragment>
+    <header className="gal-head"><h1 className="gal-title">Module — États & documents</h1><div className="gal-sub">Tous les documents comptables SYSCOHADA, au même endroit · ◌ = à venir</div></header>
+    <main style={{padding:"6px 28px 110px"}}><EtatsModule/></main>
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Style"/>
+      <TweakToggle label="Trait esquissé" value={t.sketch} onChange={(v)=>setTweak("sketch",v)}/>
+      <TweakSelect label="Police" value={t.font} options={Object.keys(FONTS)} onChange={(v)=>setTweak("font",v)}/>
+      <TweakColor label="Couleur d'accent" value={t.accent} options={["#0f766e","#1f8a5b","#c2410c","#2563eb","#7c3aed"]} onChange={(v)=>setTweak("accent",v)}/>
+      <TweakSection label="Mise en page"/>
+      <TweakRadio label="Densité" value={t.density} options={["Confort","Compact"]} onChange={(v)=>setTweak("density",v)}/>
+      <TweakToggle label="Annotations" value={t.annotations} onChange={(v)=>setTweak("annotations",v)}/>
+    </TweaksPanel>
+  </React.Fragment>);
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

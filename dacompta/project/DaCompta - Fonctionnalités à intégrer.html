@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DaCompta — Pain points OHADA → notre réponse</title>
+<link rel="stylesheet" href="styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 6px 28px 120px; }
+  .hero { display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:6px; }
+  .hero .logo { width:58px; height:58px; border:2.5px solid var(--line); border-radius:16px 22px 14px 20px / 20px 14px 22px 16px; display:grid; place-items:center; background:var(--accent); color:#fff; font-size:1.8em; font-weight:700; flex:none; }
+
+  /* scope banner */
+  .scope { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:14px; }
+  .scope .ex { display:inline-flex; align-items:center; gap:7px; border:1.5px dashed var(--ink-3); border-radius:200px; padding:3px 12px; font-size:.86em; color:var(--ink-3); }
+  .scope .ex s { text-decoration:line-through; }
+
+  /* scoreboard */
+  .score { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:18px; }
+  .scard { display:flex; gap:13px; align-items:center; padding:15px 18px; background:var(--panel); }
+  .scard .big { font-size:2.4em; line-height:.9; font-family:'Space Mono',monospace; font-weight:700; }
+  .scard .vk { line-height:1.15; }
+  .scard.ok .big { color:var(--accent); }
+  .scard.partial .big { color:#a8810a; }
+  .scard.todo .big { color:var(--danger); }
+  .scard.meta .big { color:var(--ink-2); }
+
+  /* verdict chip */
+  .vd { display:inline-flex; align-items:center; gap:6px; border:1.5px solid var(--line); border-radius:200px; padding:2px 11px; font-size:.82em; white-space:nowrap; }
+  .vd.ok { background:var(--accent-soft); border-color:var(--accent); color:var(--accent); }
+  .vd.partial { background:var(--mark); border-color:var(--mark-edge); color:#6b5800; }
+  .vd.todo { background:color-mix(in srgb, var(--danger) 13%, white); border-color:var(--danger); color:var(--danger); }
+
+  /* impact pill */
+  .imp { display:inline-flex; align-items:center; gap:6px; font-size:.8em; padding:1px 9px; border:1.5px solid var(--line); border-radius:200px; background:var(--panel); white-space:nowrap; }
+  .imp .d { width:9px;height:9px;border-radius:50%;flex:none; }
+  .imp.bloquant .d { background:var(--danger); }
+  .imp.fort .d { background:#d98a0a; }
+  .imp.modere .d { background:#caa93f; }
+
+  /* workflow spine */
+  .spine { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:26px 0 4px; padding:12px 16px; }
+  .spine .st { display:flex; align-items:center; gap:9px; }
+  .spine .bub { width:30px;height:30px;border:2px solid var(--line);border-radius:9px 14px 8px 13px / 13px 8px 14px 9px; display:grid;place-items:center;font-weight:700;background:var(--accent-soft); }
+  .spine .lab { font-size:1.02em; }
+  .spine .cnt { font-family:'Space Mono',monospace; font-size:.78em; color:var(--ink-3); }
+  .spine .arr { color:var(--ink-3); font-size:1.2em; }
+
+  .stage { margin-top:30px; }
+  .stage-h { display:flex; align-items:baseline; gap:12px; margin:0 0 4px; flex-wrap:wrap; }
+  .stage-h .pin { font-family:'Space Mono',monospace; font-weight:700; color:var(--accent); }
+  .stage-h h2 { font-size:1.5em; margin:0; }
+  .stage-sub { font-family:var(--note-font); font-size:1.25em; color:var(--ink-2); margin:0 0 14px; }
+
+  /* pain card */
+  .pain { padding:0; overflow:hidden; margin-bottom:14px; }
+  .pain-top { display:flex; align-items:flex-start; gap:13px; padding:15px 18px 13px; border-bottom:1.5px dashed var(--fill-2); }
+  .pain-top .rk { width:34px;height:34px;flex:none;border:2px solid var(--line);border-radius:9px 14px 8px 13px / 13px 8px 14px 9px; display:grid;place-items:center;font-family:'Space Mono',monospace;font-weight:700;background:var(--paper); }
+  .pain-top .pt { flex:1; min-width:0; }
+  .pain-top .pname { font-size:1.18em; font-weight:700; line-height:1.12; }
+  .pain-top .pmeta { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:7px; }
+  .pain-top .pmeta .src { font-size:.82em; color:var(--ink-3); }
+
+  .pain-constat { padding:13px 18px 4px; }
+  .pain-constat p { margin:0; line-height:1.46; font-size:.99em; }
+  .lblh { font-family:'Space Mono',monospace; font-size:.74em; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-3); margin-bottom:7px; display:flex; align-items:center; gap:7px; }
+  .lblh .d { width:8px;height:8px;border-radius:50%;flex:none;background:var(--ink-3); }
+
+  /* verbatim field-notes */
+  .verbs { padding:8px 18px 14px; display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:11px; }
+  .verb { border:2px solid var(--line); border-left:5px solid var(--accent); border-radius:4px 13px 10px 13px / 13px 10px 13px 4px; background:var(--paper); padding:11px 14px 10px; position:relative; }
+  body.clean .verb { border-radius:8px; }
+  .verb .q { font-family:var(--note-font); font-size:1.32em; line-height:1.2; color:var(--ink); }
+  .verb .by { margin-top:8px; font-size:.8em; color:var(--ink-3); display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .verb .by .who { font-weight:700; color:var(--ink-2); }
+  .verb .by .mono { font-family:'Space Mono',monospace; font-size:.92em; }
+  .verb .by .tag { border:1.5px solid var(--fill-2); border-radius:200px; padding:0 7px; }
+
+  .signal { margin:0 18px 14px; padding:10px 14px; background:var(--mark); border:1.5px solid var(--mark-edge); border-radius:10px; font-size:.93em; line-height:1.4; color:#5a4a00; }
+  .signal b { color:#3f3500; }
+
+  .pain-resp { padding:13px 18px 16px; border-top:1.5px dashed var(--fill-2); background:color-mix(in srgb, var(--accent) 4%, white); }
+  .pain-resp .do { font-family:var(--note-font); color:var(--accent); font-size:1.24em; line-height:1.22; margin:6px 0 0; }
+  .fluxlinks { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .pain-resp .lblh .d { background:var(--accent); }
+
+  /* backlog */
+  .backlog { display:flex; flex-direction:column; gap:10px; }
+  .blrow { display:flex; align-items:center; gap:14px; padding:13px 16px; background:var(--panel); text-decoration:none; color:inherit; }
+  .blrow .rank { font-family:'Space Mono',monospace; font-weight:700; font-size:1.3em; color:var(--accent); width:30px; flex:none; text-align:center; }
+  .blrow .bt { flex:1; }
+  .blrow .bt .bn { font-weight:700; }
+  .blrow .bt .bd { color:var(--ink-3); font-size:.88em; margin-top:1px; }
+  .blrow .effort { font-family:var(--note-font); font-size:1.15em; color:var(--ink-2); white-space:nowrap; }
+
+  .footlinks { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:30px; }
+
+  @media (max-width:900px){ .score{grid-template-columns:repeat(2,1fr)} .verbs{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="shared.jsx"></script>
+<script type="text/babel">
+const { useEffect } = React;
+const FONTS = { "Patrick Hand": "'Patrick Hand', cursive", "Kalam": "'Kalam', cursive", "Shantell Sans": "'Shantell Sans', cursive" };
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{ "accent":"#0f766e","sketch":true,"font":"Kalam","density":"Confort","annotations":true }/*EDITMODE-END*/;
+
+const VD = { ok: ["✓", "Acquis"], partial: ["◐", "À enrichir"], todo: ["✕", "À construire"] };
+const IMP = { bloquant: "Bloquant", fort: "Fort", modere: "Modéré" };
+
+// pain points retenus (périmètre : modules compta — hors portails fiscaux & RH)
+// rattachés aux stades du flux comptable A→Z + un bloc transverse
+const STAGES = [
+  {
+    pin: "A", icon: "⚙", titre: "Configuration", sub: "ouvrir un dossier déjà conforme, sans tout reconstruire",
+    pains: [
+      {
+        rk: "#2", ico: "▦", nom: "Plan comptable non conforme SYSCOHADA", impact: "bloquant", freq: "×6",
+        src: "KiboERP · CassKai · biz-4-africa · SyscoSage · ohada.com",
+        vd: "ok",
+        constat: "Les ERP non natifs livrent un plan comptable générique (PCG français ou neutre) par défaut. Le comptable doit reconstruire le plan SYSCOHADA classe par classe, ou bricoler un mapping — avant même la première écriture.",
+        verbs: [
+          { q: "Comment avoir un plan de compte OHADA révisé dans le format Excel ? Je suis à Bukavu en RDC.", who: "Boaz Boazi Sumaili", tag: "RDC · Bukavu", src: "ohada.com", date: "juin 2025" },
+        ],
+        resp: "Le flux Plan comptable charge le référentiel SYSCOHADA natif (9 classes, natures correctes) et importe un plan existant par Excel + IA — aucune reconstruction manuelle.",
+        links: [["Plan comptable", "DaCompta - Flux Plan comptable.html"], ["Configuration par pays", "DaCompta - Flux Configuration par pays.html"], ["Référentiel SYSCOHADA", "DaCompta - Référentiel SYSCOHADA.html"]],
+      },
+      {
+        rk: "#5", ico: "↻", nom: "Logiciels non mis à jour post-AUDCIF 2017", impact: "bloquant", freq: "×4",
+        src: "ohada.com (commentaires ×4) · Fineta",
+        vd: "ok",
+        constat: "La révision AUDCIF de 2017 (applicable au 01/01/2018) a refondu SYSCOHADA. Des logiciels génèrent encore selon l'ancienne norme, ou n'ont été mis à jour que partiellement. La question des mises à jour revient dans les commentaires jusqu'en 2025 — sept ans après la réforme.",
+        verbs: [
+          { q: "Y a-t-il déjà une possibilité d'établir les états financiers conformément aux nouvelles normes (SYSCOHADA RÉVISÉ) à partir de janvier 2018 ? Si non, pour quand ?", who: "Ahouansou Wenceslas", tag: "sur Fineta", src: "ohada.com", date: "13/07/2017" },
+          { q: "Est-elle déjà mise à jour par rapport aux récentes modifications ?", who: "Lobiko Moïse", tag: "RDC", src: "ohada.com", date: "juil. 2018" },
+        ],
+        resp: "DaCompta est nativement AUDCIF 2017 : le Référentiel embarque les classes et états révisés et les règles courantes. Pas de version « ancienne norme » à rattraper — c'est le socle, pas une option.",
+        links: [["Référentiel SYSCOHADA", "DaCompta - Référentiel SYSCOHADA.html"], ["Plan comptable", "DaCompta - Flux Plan comptable.html"]],
+      },
+      {
+        rk: "#9", ico: "⇄", nom: "Multi-devise FCFA UEMOA ≠ CEMAC", impact: "fort", freq: "×3",
+        src: "KiboERP · CassKai · guide DGI Cameroun",
+        vd: "partial",
+        constat: "Le FCFA UEMOA (XOF) et le FCFA CEMAC (XAF) sont deux devises distinctes ; s'y ajoutent les autres monnaies africaines. Les ERP étrangers gèrent EUR/USD mais ni la dualité de la zone franc ni la conversion entre entités d'un même groupe.",
+        verbs: null,
+        signal: "Signal multi-sources — la dualité XOF/XAF est citée par 3 sources. Le guide officiel DGI Cameroun impose même un taux de change saisi à la main, qu'aucun logiciel étranger ne pré-configure.",
+        resp: "La création de société fixe la devise du dossier (XOF / XAF…) ; la consolidation multi-entités convertit XOF/XAF vers la monnaie de présentation. À enrichir : une table de taux par devise et par période.",
+        links: [["Configuration par pays", "DaCompta - Flux Configuration par pays.html"], ["Consolidation multi-entités", "DaCompta - Flux Consolidation multi-entités.html"], ["Création société", "DaCompta - Flux Création société.html"]],
+      },
+    ],
+  },
+  {
+    pin: "B", icon: "✎", titre: "Saisie", sub: "encaisser et imputer comme le terrain paie vraiment",
+    pains: [
+      {
+        rk: "#6", ico: "📱", nom: "Mobile Money non géré nativement", impact: "bloquant", freq: "×4",
+        src: "KiboERP · CassKai · yorine.app · biz-4-africa",
+        vd: "todo",
+        constat: "Wave, Orange Money et MTN MoMo sont le moyen de paiement dominant des PME et commerces. Aucun ERP étranger ne les traite nativement : on ressaisit les relevés opérateur à la main et on rapproche ligne par ligne.",
+        verbs: null,
+        signal: "Signal concurrentiel — CassKai liste explicitement l'intégration Mobile Money comme un chantier « en cours », et le besoin remonte dans 4 sources. C'est le plus gros angle mort des outils non africains.",
+        resp: "À construire — un journal de trésorerie Mobile Money (compte 55x) : import du relevé opérateur, imputation assistée par IA et rapprochement comme pour la banque. Prolonge directement les journaux Caisse et Banque existants.",
+        links: [["Journal de Caisse", "DaCompta - Flux Journal de Caisse.html"], ["Journal de Banque", "DaCompta - Flux Journal de Banque.html"], ["Imputation des pièces", "DaCompta - Flux Imputation des pièces.html"]],
+      },
+    ],
+  },
+  {
+    pin: "C", icon: "▥", titre: "Restitution", sub: "sortir les états officiels sans les retaper",
+    pains: [
+      {
+        rk: "#1", ico: "▤", nom: "États financiers & TAFIRE non automatiques", impact: "bloquant", freq: "×6",
+        src: "KiboERP · CassKai · GETAFIS · Fineta · ohada.com",
+        vd: "partial",
+        constat: "Le TAFIRE et les états financiers SYSCOHADA ne se génèrent pas tout seuls dans les ERP non natifs. Le comptable ressaisit ou retraite ses données pour produire le bilan, le compte de résultat et le tableau des flux — c'est le pain point le plus cité, toutes sources confondues.",
+        verbs: [
+          { q: "Je voudrais acheter en ligne un logiciel conforme au SYSCOHADA révisé et capable de produire des états financiers.", who: "Bernard Bosele Pilipili", tag: "RDC", src: "ohada.com (GETAFIS)", date: "15/05/2022" },
+          { q: "Combler les déficiences des progiciels Sage SAARI et TOM PRO à propos du traitement et du tirage des états financiers.", who: "Louis", tag: "praticien", src: "ohada.com (Fineta)", date: "17/03/2012" },
+        ],
+        resp: "Le module États & documents produit bilan, compte de résultat et notes annexes N/N-1 directement depuis les écritures. À enrichir : le TAFIRE et l'export Excel au format officiel — le socle est déjà l'atout n°1 à mettre en avant.",
+        links: [["Module États & documents", "DaCompta - Module Etats et documents.html"], ["États en un clic", "DaCompta - Flux États en un clic.html"], ["Révision & Clôture", "DaCompta - Flux Révision & Clôture.html"]],
+      },
+    ],
+  },
+  {
+    pin: "D", icon: "⛗", titre: "Clôture", sub: "boucler l'exercice sans les semaines de retraitement",
+    pains: [
+      {
+        rk: "#3", ico: "⏳", nom: "Semaines de retraitement manuel en fin d'exercice", impact: "bloquant", freq: "×5",
+        src: "KiboERP · CassKai · GETAFIS · Fineta · impots.cm",
+        vd: "partial",
+        constat: "Faute d'états natifs, les cabinets passent des semaines à retraiter l'exercice en fin d'année : reclassements, mapping de comptes, ressaisie — avant de pouvoir sortir le moindre bilan. Le coût caché le plus douloureux des outils non conformes.",
+        verbs: [
+          { q: "J'ai besoin du logiciel pour bien me former et faire des bilans.", who: "Savadogo", tag: "Burkina", src: "ohada.com", date: "23/06/2022" },
+        ],
+        resp: "Les écritures alimentent directement balances et états : lettrage, balances et bilan/résultat sortent de la Révision & Clôture sans retraitement de fin d'année. Le solde progressif par tiers, déjà en place, évite la reconstitution manuelle des comptes.",
+        links: [["Révision & Clôture", "DaCompta - Flux Révision & Clôture.html"], ["États en un clic", "DaCompta - Flux États en un clic.html"]],
+      },
+    ],
+  },
+];
+
+// pain point transverse (pas un stade du flux — il conditionne l'accès à tout le reste)
+const TRANSVERSE = {
+  pin: "✦", icon: "⛅", titre: "Transverse — accès & terrain", sub: "atteindre les comptables là où ils sont vraiment",
+  pains: [
+    {
+      rk: "#14", ico: "📍", nom: "Logiciels introuvables hors des capitales", impact: "modere", freq: "×2",
+      src: "ohada.com (RDC : Bukavu, Goma)",
+      vd: "ok",
+      constat: "Les logiciels desktop sont distribués depuis les capitales. En ville secondaire — Bukavu, Goma… — les comptables ne savent ni où les acquérir ni comment les installer. La friction d'acquisition bloque avant même l'usage.",
+      verbs: [
+        { q: "Suis en RDC à Goma. Comment acquérir ce logiciel ?", who: "Bienvenu", tag: "RDC · Goma", src: "ohada.com", date: "30/04/2019" },
+        { q: "Comment puis-je faire pour apprendre à utiliser le logiciel OHADA et l'avoir pour mes activités ?", who: "Muwuku Bernard", tag: "—", src: "ohada.com", date: "09/01/2025" },
+      ],
+      resp: "DaCompta est un SaaS web : aucune installation, accessible depuis n'importe quelle ville. Le mode offline-first permet de saisir sans connexion stable et de synchroniser ensuite — pensé pour les territoires à faible urbanisation.",
+      links: [["Offline-first", "DaCompta - Flux Offline-first.html"], ["Navigation globale", "DaCompta - Navigation globale.html"]],
+    },
+  ],
+};
+
+function VdChip({ v }) { return <span className={"vd " + v}>{VD[v][0]} {VD[v][1]}</span>; }
+
+function PainCard({ p }) {
+  return (
+    <div className="card sk pain">
+      <div className="pain-top">
+        <span className="rk">{p.rk}</span>
+        <div className="pt">
+          <div className="pname">{p.ico} {p.nom}</div>
+          <div className="pmeta">
+            <span className={"imp " + p.impact}><span className="d" /> {IMP[p.impact]}</span>
+            <span className="chip" style={{ fontSize: ".8em" }}>fréquence {p.freq}</span>
+            <span className="src">{p.src}</span>
+          </div>
+        </div>
+        <VdChip v={p.vd} />
+      </div>
+
+      <div className="pain-constat">
+        <div className="lblh"><span className="d" /> Le constat — terrain</div>
+        <p>{p.constat}</p>
+      </div>
+
+      {p.verbs && (
+        <div className="verbs">
+          {p.verbs.map((v, i) => (
+            <div className="verb" key={i}>
+              <div className="q">« {v.q} »</div>
+              <div className="by">
+                <span className="who">— {v.who}</span>
+                {v.tag && v.tag !== "—" && <span className="tag">{v.tag}</span>}
+                <span>{v.src}</span>
+                <span className="mono">{v.date}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {p.signal && <div className="signal">{p.signal}</div>}
+
+      <div className="pain-resp">
+        <div className="lblh"><span className="d" /> Réponse DaCompta</div>
+        <p className="do">→ {p.resp}</p>
+        <div className="fluxlinks">
+          {p.links.map((l, i) => <a key={i} className={"btn sm" + (i === 0 ? " primary" : "")} href={l[1]}>{l[0]}{i === 0 ? " ↗" : ""}</a>)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Stage({ s }) {
+  return (
+    <section className="stage">
+      <div className="stage-h">
+        <span className="pin">{s.pin}</span>
+        <h2>{s.icon} {s.titre}</h2>
+      </div>
+      <p className="annotation stage-sub">· {s.sub}</p>
+      {s.pains.map((p, j) => <PainCard key={j} p={p} />)}
+    </section>
+  );
+}
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  useEffect(() => {
+    document.documentElement.style.setProperty("--accent", t.accent);
+    document.documentElement.style.setProperty("--ui-font", FONTS[t.font] || FONTS["Patrick Hand"]);
+    document.body.classList.toggle("clean", !t.sketch);
+    document.body.classList.toggle("density-compact", t.density === "Compact");
+    document.body.classList.toggle("no-annot", !t.annotations);
+  }, [t]);
+
+  return (
+    <React.Fragment>
+      <div className="wrap">
+        <header className="hero">
+          <div className="logo">Dₐ</div>
+          <div>
+            <h1 className="gal-title" style={{ margin: 0 }}>Pain points OHADA → notre réponse</h1>
+            <div className="gal-sub">Veille terrain multi-sources · ce qui fait souffrir les comptables → le flux DaCompta qui y répond</div>
+          </div>
+        </header>
+        <div className="annotation annot" style={{ marginTop: 8, maxWidth: 900 }}>
+          Synthèse de l'étude marché v2 (ohada.com, CassKai, GETAFIS, Fineta, Compta Expert, guide DGI…). On garde les verbatims des praticiens comme preuve terrain, on classe chaque pain point, et on le rattache au flux DaCompta qui l'adresse — de la config à la clôture.
+        </div>
+        <div className="scope">
+          <span className="ex">Périmètre : modules comptables</span>
+          <span className="ex"><s>portails fiscaux</s> hors périmètre</span>
+          <span className="ex"><s>module RH / paie</s> hors périmètre</span>
+        </div>
+
+        {/* scoreboard */}
+        <div className="score">
+          <div className="card sk scard ok">
+            <span className="big">3</span>
+            <div className="vk"><div className="b">Acquis</div><div className="muted small">déjà couvert par un flux</div></div>
+          </div>
+          <div className="card sk scard partial">
+            <span className="big">3</span>
+            <div className="vk"><div className="b">À enrichir</div><div className="muted small">base en place, extension à faire</div></div>
+          </div>
+          <div className="card sk scard todo">
+            <span className="big">1</span>
+            <div className="vk"><div className="b">À construire</div><div className="muted small">aucun flux ne le couvre</div></div>
+          </div>
+          <div className="card sk scard meta">
+            <span className="big">12+</span>
+            <div className="vk"><div className="b">sources</div><div className="muted small">praticiens cités · 17 pays</div></div>
+          </div>
+        </div>
+
+        {/* spine */}
+        <div className="card fill sk spine">
+          {STAGES.map((s, i) => (
+            <React.Fragment key={i}>
+              <div className="st">
+                <span className="bub">{s.pin}</span>
+                <span className="lab b">{s.titre}</span>
+                <span className="cnt">{s.pains.length}</span>
+              </div>
+              {i < STAGES.length - 1 && <span className="arr">→</span>}
+            </React.Fragment>
+          ))}
+          <span className="arr">·</span>
+          <div className="st">
+            <span className="bub">{TRANSVERSE.pin}</span>
+            <span className="lab b">Accès terrain</span>
+            <span className="cnt">{TRANSVERSE.pains.length}</span>
+          </div>
+        </div>
+        <Annot style={{ marginTop: 8 }}>Chaque pain point est resitué à son stade dans le flux comptable de bout en bout — et le dernier conditionne l'accès à tout le reste.</Annot>
+
+        {/* stages */}
+        {STAGES.map((s, i) => <Stage key={i} s={s} />)}
+        <Stage s={TRANSVERSE} />
+
+        {/* backlog */}
+        <section className="stage">
+          <div className="stage-h">
+            <span className="pin">∑</span>
+            <h2>★ Backlog priorisé</h2>
+          </div>
+          <p className="annotation stage-sub">· les pain points à enrichir ou construire d'abord — par impact différenciant vs effort</p>
+          <div className="backlog">
+            <a href="DaCompta - Flux Journal de Caisse.html" className="card sk blrow">
+              <span className="rank">1</span>
+              <div className="bt"><div className="bn">📱 Trésorerie Mobile Money (Wave / Orange / MTN)</div><div className="bd">Le plus gros angle mort des concurrents — prolonge les journaux Caisse & Banque</div></div>
+              <span className="vd todo" style={{ marginRight: 8 }}>✕ à construire</span>
+              <span className="effort">effort élevé</span>
+            </a>
+            <a href="DaCompta - Flux États en un clic.html" className="card sk blrow">
+              <span className="rank">2</span>
+              <div className="bt"><div className="bn">▤ TAFIRE & export Excel officiel</div><div className="bd">Complète le pain point n°1 toutes sources — états déjà produits, reste le tableau des flux</div></div>
+              <span className="vd partial" style={{ marginRight: 8 }}>◐ à enrichir</span>
+              <span className="effort">effort moyen</span>
+            </a>
+            <a href="DaCompta - Flux Révision & Clôture.html" className="card sk blrow">
+              <span className="rank">3</span>
+              <div className="bt"><div className="bn">⏳ Clôture sans retraitement</div><div className="bd">Découle des états natifs — supprime les semaines de fin d'exercice</div></div>
+              <span className="vd partial" style={{ marginRight: 8 }}>◐ à enrichir</span>
+              <span className="effort">effort moyen</span>
+            </a>
+            <a href="DaCompta - Flux Configuration par pays.html" className="card sk blrow">
+              <span className="rank">4</span>
+              <div className="bt"><div className="bn">⇄ Multi-devise XOF / XAF + table de taux</div><div className="bd">Dualité de la zone franc — base présente en création société & consolidation</div></div>
+              <span className="vd partial" style={{ marginRight: 8 }}>◐ à enrichir</span>
+              <span className="effort">effort faible</span>
+            </a>
+          </div>
+        </section>
+
+        <div className="note" style={{ textAlign: "center", marginTop: 30 }}>
+          Un pain point à reclasser, une source à ajouter, ou un flux à détailler en premier ? Dites-le — on transforme la ligne en page de workflow.
+        </div>
+        <div className="footlinks">
+          <a className="btn" href="DaCompta - Accueil.html">← Retour à l'accueil</a>
+          <a className="btn" href="DaCompta - Référentiel SYSCOHADA.html">Référentiel SYSCOHADA →</a>
+          <a className="btn" href="DaCompta - Test de l'ERP africain.html">Test de l'ERP africain →</a>
+        </div>
+      </div>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Style" />
+        <TweakToggle label="Trait esquissé" value={t.sketch} onChange={(v) => setTweak("sketch", v)} />
+        <TweakSelect label="Police" value={t.font} options={Object.keys(FONTS)} onChange={(v) => setTweak("font", v)} />
+        <TweakColor label="Couleur d'accent" value={t.accent}
+          options={["#0f766e", "#1f8a5b", "#c2410c", "#2563eb", "#7c3aed"]}
+          onChange={(v) => setTweak("accent", v)} />
+        <TweakSection label="Mise en page" />
+        <TweakRadio label="Densité" value={t.density} options={["Confort", "Compact"]} onChange={(v) => setTweak("density", v)} />
+        <TweakToggle label="Annotations manuscrites" value={t.annotations} onChange={(v) => setTweak("annotations", v)} />
+      </TweaksPanel>
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

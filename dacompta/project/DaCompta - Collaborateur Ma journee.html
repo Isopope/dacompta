@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DaCompta — Collaborateur · Ma journée</title>
+<link rel="stylesheet" href="styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  .sect-t { display:flex; align-items:center; gap:8px; margin: 4px 0 2px; }
+  .sect-t .b { font-size: 1.05em; }
+  .jr-grid { display:grid; grid-template-columns: repeat(4,1fr); gap:10px; }
+  .jr { display:flex; flex-direction:column; gap:3px; padding:10px 12px; border:2px solid var(--line); border-radius:11px; background:var(--panel); cursor:pointer; }
+  body.clean .jr { border-radius:8px; }
+  .jr:hover { background: var(--accent-soft); }
+  .jr .c { font-family:'Space Mono',monospace; font-weight:700; }
+  .jr .n { color: var(--ink-3); font-size:.82em; }
+  .doc { display:inline-flex; align-items:center; gap:7px; padding:6px 11px; border:2px solid var(--line); border-radius:200px; background:var(--panel); cursor:pointer; font-size:.9em; }
+  body.clean .doc { border-radius:8px; }
+  .doc:hover { background: var(--accent-soft); }
+  .doc.todo { border-style: dashed; color: var(--ink-3); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="shared.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+const FONTS = { "Patrick Hand": "'Patrick Hand', cursive", "Kalam": "'Kalam', cursive", "Shantell Sans": "'Shantell Sans', cursive" };
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accent": "#7c3aed",
+  "sketch": true,
+  "font": "Kalam",
+  "density": "Compact",
+  "annotations": true
+}/*EDITMODE-END*/;
+
+const NAV = [
+  { sect: "Pilotage" },
+  { ico: "◎", label: "Ma journée", active: true },
+  { ico: "▦", label: "Mes dossiers", badge: "14" },
+  { sect: "Dossier courant" },
+  { ico: "✉", label: "Pièces reçues", badge: "23" },
+  { ico: "✎", label: "Écritures" },
+  { ico: "▤", label: "Journaux" },
+  { ico: "⇄", label: "Banques" },
+  { ico: "▥", label: "États & DSF" },
+];
+
+const DOSSIERS = [
+  ["Les Associés SA", "Transport · Lomé", 8, "DSF 15 mai", "warn"],
+  ["Ivoire Négoce", "Commerce · Abidjan", 0, "—", "ok"],
+  ["BTP Sahel SARL", "BTP · Ouaga", 12, "TVA 20 mai", "warn"],
+  ["Pharma Plus", "Officine · Dakar", 3, "—", "ok"],
+];
+
+const JOURNAUX = [["ACH", "Achats"], ["VT", "Ventes"], ["CAI", "Caisse"], ["BIMA", "Banque"], ["OD", "Opér. diverses"], ["PE", "Paie"], ["RAN", "À-nouveau"], ["BTCI", "Banque 2"]];
+const DOCS = [["Balance", 1], ["Grand livre", 1], ["Bilan", 1], ["Compte de résultat", 1], ["Brouillard", 1], ["Rapprochement bancaire", 0], ["Déclaration TVA", 0], ["Liasse DSF", 0]];
+
+function Cockpit() {
+  return (
+    <div className="appframe" style={{ maxWidth: 1180, margin: "0 auto" }}>
+      <div className="win-bar"><div className="dots"><i /><i /><i /></div><span className="small muted">DaCompta — Cabinet Diallo & Co</span><div className="grow" style={{ flex: 1 }} /><span className="pill-sync"><span className="dot" /> Hors-ligne prêt</span></div>
+      <div className="app threecol" style={{ "--side-w": "220px", "--rail-w": "280px", "--app-h": "640px" }}>
+        {/* sidebar familière */}
+        <aside className="side">
+          <div className="brand"><div className="logo">Dₐ</div><div className="name">DaCompta</div></div>
+          <DossierSwitcher name="Les Associés SA" sub="dossier courant · changer ▾" />
+          {NAV.map((it, i) => it.sect
+            ? <div key={i} className="nav-sect">{it.sect}</div>
+            : <div key={i} className={"nav-item" + (it.active ? " active" : "")}><span className="ico">{it.ico}</span><span style={{ flex: 1 }}>{it.label}</span>{it.badge && <span className="chip warn" style={{ fontSize: ".68em", padding: "0 7px" }}>{it.badge}</span>}</div>)}
+          <div style={{ flex: 1 }} />
+          <div className="nav-item"><span className="ico">⚙</span><span style={{ flex: 1 }}>Paramètres</span></div>
+        </aside>
+
+        {/* centre : Ma journée */}
+        <div className="main">
+          <div className="flex center g10">
+            <div><div style={{ fontSize: "1.5em" }} className="b">Bonjour Awa 👋</div><span className="muted">Mardi 13 juin · 14 dossiers · 3 échéances cette semaine</span></div>
+            <div className="grow" />
+            <Btn kind="primary">+ Saisir une pièce</Btn>
+            <Btn>Importer un relevé</Btn>
+          </div>
+
+          {/* à traiter aujourd'hui */}
+          <div className="sect-t"><span className="b">À traiter aujourd'hui</span><span className="annotation annot">· classé par l'IA, du plus urgent au moins</span></div>
+          <div className="grid" style={{ gridTemplateColumns: "repeat(3,1fr)" }}>
+            <div className="card" style={{ borderColor: "var(--mark-edge)", background: "var(--mark)" }}>
+              <div className="flex center g8"><span className="chip ai">✦</span><span className="b">23 pièces reçues</span></div>
+              <div className="muted small mt8">photos WhatsApp, scans, relevés — pré-imputées, à valider</div>
+              <div className="flex g8 mt8"><Btn kind="primary" sm>Traiter l'inbox →</Btn></div>
+            </div>
+            <div className="card" style={{ borderColor: "var(--danger)" }}>
+              <div className="flex center g8"><span className="chip warn">⏲</span><span className="b">3 échéances &lt; 7 j</span></div>
+              <div className="muted small mt8">DSF Les Associés (15) · TVA BTP Sahel (20) · CNSS (18)</div>
+              <div className="flex g8 mt8"><Btn sm>Voir l'agenda fiscal →</Btn></div>
+            </div>
+            <div className="card">
+              <div className="flex center g8"><span className="chip warn">!</span><span className="b">4 anomalies</span></div>
+              <div className="muted small mt8">doublon facture · TVA incohérente · solde caisse négatif évité</div>
+              <div className="flex g8 mt8"><Btn sm>Vérifier →</Btn></div>
+            </div>
+          </div>
+
+          {/* mes dossiers */}
+          <div className="sect-t"><span className="b">Mes dossiers</span><div className="grow" /><span className="muted small">avancement de la saisie du mois</span></div>
+          <Card style={{ padding: 0 }}>
+            <table className="tbl">
+              <tbody>
+                {DOSSIERS.map((d, i) => (
+                  <tr key={i}>
+                    <td><span className="avatar" style={{ display: "inline-grid", verticalAlign: "middle", marginRight: 8 }}>{d[0].slice(0, 2).toUpperCase()}</span><span className="b">{d[0]}</span></td>
+                    <td className="muted small">{d[1]}</td>
+                    <td>{d[2] > 0 ? <Chip kind="warn">{d[2]} à traiter</Chip> : <Chip kind="fill">à jour</Chip>}</td>
+                    <td className="small">{d[4] === "warn" ? <span style={{ color: "var(--danger)" }}>{d[3]}</span> : <span className="muted">{d[3]}</span>}</td>
+                    <td className="right"><Btn sm>Ouvrir →</Btn></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+
+          {/* familier : journaux + états */}
+          <div className="sect-t"><span className="b">Journaux de saisie</span><span className="annotation annot">· votre environnement habituel, intact</span></div>
+          <div className="jr-grid">
+            {JOURNAUX.map((j, i) => (
+              <div key={i} className="jr"><span className="c">{j[0]}</span><span className="n">{j[1]}</span></div>
+            ))}
+          </div>
+
+          <div className="sect-t"><span className="b">États & documents</span><span className="annotation annot">· ◌ = à venir</span></div>
+          <div className="flex wrap g8">
+            {DOCS.map((d, i) => (
+              <span key={i} className={"doc" + (d[1] ? "" : " todo")}>{d[1] ? "▥" : "◌"} {d[0]}</span>
+            ))}
+          </div>
+        </div>
+
+        {/* copilote */}
+        <aside className="rail">
+          <div className="rail-h"><span className="chip ai">✦ Copilote</span></div>
+          <div className="bubble ai small">J'ai pré-imputé 19 des 23 pièces (confiance &gt; 90 %). Tu peux tout valider en lot, je laisse les 4 douteuses pour toi.</div>
+          <div className="flex g8"><Btn kind="primary" sm>Valider les 19 ✓</Btn><Btn sm>Revoir</Btn></div>
+          <div className="card" style={{ padding: 11 }}>
+            <div className="small muted">Rappel</div>
+            <div className="b small">DSF « Les Associés » dans 2 jours</div>
+          </div>
+          <div style={{ flex: 1 }} />
+          <div className="searchbar" style={{ background: "var(--panel)" }}>✎ <span>Demander à l'assistant…</span></div>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  useEffect(() => {
+    document.documentElement.style.setProperty("--accent", t.accent);
+    document.documentElement.style.setProperty("--ui-font", FONTS[t.font] || FONTS["Patrick Hand"]);
+    document.body.classList.toggle("clean", !t.sketch);
+    document.body.classList.toggle("density-compact", t.density === "Compact");
+    document.body.classList.toggle("no-annot", !t.annotations);
+  }, [t]);
+
+  return (
+    <React.Fragment>
+      <header className="gal-head">
+        <h1 className="gal-title">Collaborateur de cabinet — « Ma journée »</h1>
+        <div className="gal-sub">Le quotidien réorganisé autour de l'urgence & des pièces — son environnement Sage reste intact</div>
+      </header>
+      <div className="legend annotation" style={{ maxWidth: 1180, margin: "0 auto 14px", padding: "0 28px" }}>
+        <span className="annot" style={{ fontSize: "1.15em", color: "var(--ink-2)" }}>Familier (journaux, balance, états, vocabulaire SYSCOHADA) <b>+</b> augmenté (inbox de pièces, multi-dossiers, copilote) — on ne dépayse pas, on assiste.</span>
+      </div>
+      <main style={{ padding: "0 28px 110px" }}><Cockpit /></main>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Style" />
+        <TweakToggle label="Trait esquissé" value={t.sketch} onChange={(v) => setTweak("sketch", v)} />
+        <TweakSelect label="Police" value={t.font} options={Object.keys(FONTS)} onChange={(v) => setTweak("font", v)} />
+        <TweakColor label="Couleur d'accent" value={t.accent}
+          options={["#0f766e", "#1f8a5b", "#c2410c", "#2563eb", "#7c3aed"]}
+          onChange={(v) => setTweak("accent", v)} />
+        <TweakSection label="Mise en page" />
+        <TweakRadio label="Densité" value={t.density} options={["Confort", "Compact"]} onChange={(v) => setTweak("density", v)} />
+        <TweakToggle label="Annotations" value={t.annotations} onChange={(v) => setTweak("annotations", v)} />
+      </TweaksPanel>
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

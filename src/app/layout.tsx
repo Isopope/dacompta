@@ -8,7 +8,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="fr">
       <body>
         <nav style={{ display: "flex", gap: 20, padding: "12px 24px", borderBottom: "2px solid var(--line)", background: "var(--panel)", alignItems: "center" }}>
-          <span style={{ fontWeight: 700, fontFamily: "'Space Mono', monospace" }}>DaCompta</span>
+          <a href="/" style={{ fontWeight: 700, fontFamily: "'Space Mono', monospace", color: "inherit", textDecoration: "none" }}>DaCompta</a>
+          <a href="/" style={{ color: "inherit", textDecoration: "none" }}>Tableau de bord</a>
           <a href="/plan-comptable" style={{ color: "inherit", textDecoration: "none" }}>Plan comptable</a>
           <a href="/ecritures" style={{ color: "inherit", textDecoration: "none" }}>Écritures</a>
           <a href="/budget" style={{ color: "inherit", textDecoration: "none" }}>Budget</a>

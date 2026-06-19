@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DaCompta — Accueil</title>
+<link rel="stylesheet" href="styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  .hub-hero { max-width: 1180px; margin: 0 auto; padding: 8px 28px 0; }
+  .hub-logo { width: 60px; height: 60px; border: 2.5px solid var(--line); border-radius: 16px 22px 14px 20px / 20px 14px 22px 16px; display: grid; place-items: center; background: var(--accent); color: #fff; font-size: 1.9em; font-weight: 700; }
+  .phase { max-width: 1180px; margin: 0 auto; padding: 6px 28px; }
+  .phase-h { display: flex; align-items: center; gap: 12px; margin: 22px 0 12px; }
+  .phase-h .pn { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; background: var(--panel); font-size: .9em; }
+  .phase-h h2 { font-size: 1.5em; margin: 0; }
+  .hub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+  .hub-card { display: flex; flex-direction: column; gap: 7px; padding: 15px; text-decoration: none; color: inherit; background: var(--panel); transition: transform .12s, box-shadow .12s; }
+  .hub-card:hover { transform: translateY(-3px) rotate(-.3deg); box-shadow: 5px 7px 0 rgba(0,0,0,0.09); }
+  .hub-card .step { font-family: var(--note-font); font-size: 1.3em; color: var(--accent); }
+  .hub-card .ct { font-size: 1.15em; line-height: 1.05; }
+  .hub-card .cd { color: var(--ink-3); font-size: .9em; line-height: 1.25; flex: 1; }
+  .hub-card .go { font-family: var(--note-font); color: var(--accent); font-size: 1.1em; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="shared.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+const FONTS = { "Patrick Hand": "'Patrick Hand', cursive", "Kalam": "'Kalam', cursive", "Shantell Sans": "'Shantell Sans', cursive" };
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accent": "#0f766e",
+  "sketch": true,
+  "font": "Kalam",
+  "density": "Confort",
+  "annotations": true
+}/*EDITMODE-END*/;
+
+const PHASES = [
+  { n: "A", titre: "Mise en route", sub: "configurer le dossier sans la corvée Sage", cards: [
+    ["01", "Création de société", "Pays & référentiel (OHADA / IFRS), identité, exercice — zéro-config", "DaCompta - Flux Création société.html"],
+    ["02", "Plan comptable", "SYSCOHADA natif, natures correctes, import Excel par IA", "DaCompta - Flux Plan comptable.html"],
+    ["03", "Structure comptable", "Tiers · Analytique (bus) · Codes journaux", "DaCompta - Flux Structure comptable.html"],
+    ["04", "Budget de fonctionnement", "Postes, répartition souple, écart prévision / réalisé vivant", "DaCompta - Flux Budget de fonctionnement.html"],
+  ] },
+  { n: "B", titre: "Saisie quotidienne", sub: "écritures, OCR, ventilation analytique", cards: [
+    ["05", "Bilan d'ouverture", "Journal RAN, équilibre vivant, tiers à la volée", "DaCompta - Flux Saisie bilan d'ouverture.html"],
+    ["06", "Imputation des pièces", "OCR + imputation IA + TVA & analytique automatiques", "DaCompta - Flux Imputation des pièces.html"],
+    ["07", "Journal des Achats", "Échéances auto, ventilation analytique, brouillard vivant", "DaCompta - Flux Journal des Achats.html"],
+    ["08", "Journal de Caisse", "Contrepartie auto 571100, solde débiteur contrôlé", "DaCompta - Flux Journal de Caisse.html"],
+    ["09", "Journal de Banque", "Contrepartie fusionnée, régularisation IA, rapprochement", "DaCompta - Flux Journal de Banque.html"],
+    ["10", "Journal de Paie", "Engagement des salaires, tiers Salarié 422000", "DaCompta - Flux Journal de Paie.html"],
+  ] },
+  { n: "C", titre: "Fin de mois & clôture", sub: "régularisations et états SYSCOHADA", cards: [
+    ["11", "Régularisation TVA", "Liquidation calculée, écriture JOD pré-générée, télédéclaration", "DaCompta - Flux Régularisation TVA.html"],
+    ["12", "Écriture d'abonnement", "Lissage des charges payées d'avance (476)", "DaCompta - Flux Écriture d'abonnement.html"],
+    ["13", "Révision & Clôture", "Lettrage, balances, bilan/résultat, bascule nouvel exercice", "DaCompta - Flux Révision & Clôture.html"],
+    ["14", "États & documents", "Tous les documents SYSCOHADA — balances, états financiers, fiscal & social", "DaCompta - Module Etats et documents.html"],
+  ] },
+  { n: "✦", titre: "Exploration & socle", sub: "pistes de design et coque produit", cards: [
+    ["réf", "Référentiel SYSCOHADA", "Le socle : 17 pays, 9 classes, états obligatoires, AUDCIF 2017, erreurs fréquentes", "DaCompta - Référentiel SYSCOHADA.html"],
+    ["veille", "Pain points OHADA → réponse", "Veille terrain multi-sources : pain points classés + verbatims praticiens → flux DaCompta + backlog", "DaCompta - Fonctionnalités à intégrer.html"],
+    ["test", "Test de l'ERP africain", "Le test des 3 minutes + checklist marché, scorée honnêtement (comptabilité-first)", "DaCompta - Test de l'ERP africain.html"],
+    ["B1", "Flux — Configuration par pays", "Backlog #1 : pays (17 OHADA) → référentiel, fiscalité, calendrier & DSF préchargés", "DaCompta - Flux Configuration par pays.html"],
+    ["B2", "Flux — Liasse fiscale & retenues", "Backlog #2 : IBS annuel + retenues ITS/IRPP par salarié → exports DGI", "DaCompta - Flux Liasse fiscale & retenues.html"],
+    ["B3", "Flux — Export FEC", "Backlog #3 : Fichier des Écritures Comptables, contrôles & export par pays", "DaCompta - Flux Export FEC.html"],
+    ["B4", "Flux — Consolidation multi-entités", "Backlog #4 : groupe multi-pays, conversion XOF/XAF, éliminations, états consolidés", "DaCompta - Flux Consolidation multi-entités.html"],
+    ["F+", "Flux — Écritures automatiques", "Opération métier → écriture équilibrée, TVA ventilée + stock CMUP", "DaCompta - Flux Écritures automatiques.html"],
+    ["F+", "Flux — TVA multi-taux", "4431 ventilé par taux · marge, autoliquidation, exonéré · déclaration pré-remplie", "DaCompta - Flux TVA multi-taux.html"],
+    ["F+", "Flux — États en un clic", "Bilan, CR, TAFIRE générés depuis les écritures · export PDF/Excel SYSCOHADA", "DaCompta - Flux États en un clic.html"],
+    ["IA", "Flux — IA Anomalies", "Détection continue : doublons, sans pièce, mauvaise imputation, montants inhabituels", "DaCompta - Flux IA Anomalies.html"],
+    ["IA", "Flux — IA Conseil", "Recommandations fiscales, optimisation, alertes réglementaires & sociales", "DaCompta - Flux IA Conseil.html"],
+    ["IA", "Flux — IA Trésorerie", "Prévision cash 6 semaines, alertes découvert, pilotage BFR, actions concrètes", "DaCompta - Flux IA Trésorerie.html"],
+    ["⛅", "Flux — Offline-first", "Saisie hors-ligne, file d'attente, sync delta, résolution de conflits", "DaCompta - Flux Offline-first.html"],
+    ["00", "Galerie de wireframes", "Architecture, configuration & assistant IA — 3 pistes par zone", "DaCompta - Wireframes.html"],
+    ["★", "Navigation globale", "La coque définitive — synthèse des 3 pistes d'architecture", "DaCompta - Navigation globale.html"],
+    ["★", "Collaborateur · Ma journée", "Le cockpit quotidien du collaborateur de cabinet (familier + augmenté)", "DaCompta - Collaborateur Ma journee.html"],
+    ["doc", "Spec — Ma journée", "Hiérarchie d'information & backlog d'implémentation (document)", "DaCompta - Spec Ma journee.html"],
+    ["doc", "Architecture des modules", "Carte UML — comment tous les modules s'agencent (dev & tutoriels)", "DaCompta - Architecture des modules.html"],
+    ["HF", "Ma journée — haute fidélité", "Le cockpit habillé avec le design system BatiScript (indigo/navy, Poppins)", "DaCompta HF - Ma journee (BatiScript).html"],
+  ] },
+];
+
+function HubApp() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  useEffect(() => {
+    document.documentElement.style.setProperty("--accent", t.accent);
+    document.documentElement.style.setProperty("--ui-font", FONTS[t.font] || FONTS["Patrick Hand"]);
+    document.body.classList.toggle("clean", !t.sketch);
+    document.body.classList.toggle("density-compact", t.density === "Compact");
+    document.body.classList.toggle("no-annot", !t.annotations);
+  }, [t]);
+
+  return (
+    <React.Fragment>
+      <header className="gal-head" style={{ paddingBottom: 0 }}>
+        <div className="flex center g16" style={{ flexWrap: "wrap" }}>
+          <div className="hub-logo">Dₐ</div>
+          <div>
+            <h1 className="gal-title" style={{ margin: 0 }}>DaCompta</h1>
+            <div className="gal-sub">Comptabilité OHADA, sans la friction — parcours de démonstration</div>
+          </div>
+        </div>
+        <div className="annotation annot" style={{ marginTop: 14, maxWidth: 760 }}>
+          Le cas pratique « Les Associés SA » (Lomé, Togo), de la création du dossier à la clôture — chaque étape réadaptée du parcours Sage 100 et dé-frictionnée. Cliquez une carte pour ouvrir le flux.
+        </div>
+      </header>
+
+      <main style={{ paddingBottom: 110 }}>
+        {PHASES.map((ph, i) => (
+          <section className="phase" key={i}>
+            <div className="phase-h">
+              <span className="pn">{ph.n}</span>
+              <h2>{ph.titre}</h2>
+              <span className="annotation annot" style={{ fontSize: "1.15em" }}>· {ph.sub}</span>
+            </div>
+            <div className="hub-grid">
+              {ph.cards.map((c, k) => (
+                <a className="hub-card sk" href={c[3]} key={k}>
+                  <span className="step">{c[0]}</span>
+                  <span className="ct b">{c[1]}</span>
+                  <span className="cd">{c[2]}</span>
+                  <span className="go">Ouvrir →</span>
+                </a>
+              ))}
+            </div>
+          </section>
+        ))}
+      </main>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Style" />
+        <TweakToggle label="Trait esquissé" value={t.sketch} onChange={(v) => setTweak("sketch", v)} />
+        <TweakSelect label="Police" value={t.font} options={Object.keys(FONTS)} onChange={(v) => setTweak("font", v)} />
+        <TweakColor label="Couleur d'accent" value={t.accent}
+          options={["#0f766e", "#1f8a5b", "#c2410c", "#2563eb", "#7c3aed"]}
+          onChange={(v) => setTweak("accent", v)} />
+        <TweakSection label="Mise en page" />
+        <TweakRadio label="Densité" value={t.density} options={["Confort", "Compact"]} onChange={(v) => setTweak("density", v)} />
+        <TweakToggle label="Annotations manuscrites" value={t.annotations} onChange={(v) => setTweak("annotations", v)} />
+      </TweaksPanel>
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<HubApp />);
+</script>
+</body>
+</html>

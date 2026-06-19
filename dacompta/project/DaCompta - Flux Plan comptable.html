@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DaCompta — Flux : Plan comptable</title>
+<link rel="stylesheet" href="styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  .sage-ribbon { display: flex; align-items: flex-start; gap: 10px; max-width: 1180px; margin: 0 auto 14px; padding: 10px 16px; border: 2px dashed var(--danger); border-radius: 12px; background: color-mix(in srgb, var(--danger) 7%, white); }
+  .sage-ribbon .tag { flex: none; font-size: .78em; padding: 2px 9px; border-radius: 200px; background: var(--danger); color: #fff; }
+  body.no-annot .sage-ribbon { display: none; }
+  /* workspace tabs */
+  .ws-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--line); background: var(--paper); padding: 0 12px; }
+  .ws-tab { font-family: var(--ui-font); padding: 11px 18px; cursor: pointer; color: var(--ink-2); border-bottom: 3px solid transparent; margin-bottom: -2px; }
+  .ws-tab.on { color: var(--ink); border-bottom-color: var(--accent); font-weight: 700; }
+  /* segmented (type / report / mode) */
+  .modeseg { display: inline-flex; border: 2px solid var(--line); border-radius: 200px; overflow: hidden; background: var(--panel); width: fit-content; }
+  .modeseg button { font-family: var(--ui-font); font-size: .88em; border: none; background: transparent; color: var(--ink-2); padding: 5px 14px; cursor: pointer; }
+  .modeseg button.on { background: var(--accent); color: #fff; }
+  /* advanced disclosure */
+  .adv { border: 2px dashed var(--accent); border-radius: 12px; padding: 14px; background: color-mix(in srgb, var(--accent) 5%, white); display: flex; flex-direction: column; gap: 12px; }
+  .adv-h { display: flex; align-items: center; gap: 10px; }
+  .adv-collapsed { display: flex; align-items: center; gap: 10px; border: 2px dashed var(--ink-3); border-radius: 12px; padding: 10px 14px; opacity: .8; }
+  /* drawer */
+  .drawer-wrap { position: absolute; inset: 0; pointer-events: none; z-index: 40; }
+  .drawer-scrim { position: absolute; inset: 0; background: rgba(0,0,0,0.18); }
+  .drawer { position: absolute; top: 0; right: 0; bottom: 0; width: 380px; max-width: 92%; background: var(--panel); border-left: 2.5px solid var(--line); padding: 20px; overflow-y: auto; box-shadow: -8px 0 24px rgba(0,0,0,0.12); }
+  .drawer-wrap.open { pointer-events: auto; }
+  .appframe { position: relative; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="shared.jsx"></script>
+<script type="text/babel" src="plancompta.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+const FONTS = { "Patrick Hand": "'Patrick Hand', cursive", "Kalam": "'Kalam', cursive", "Shantell Sans": "'Shantell Sans', cursive" };
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accent": "#0f766e",
+  "sketch": true,
+  "font": "Kalam",
+  "density": "Compact",
+  "annotations": true
+}/*EDITMODE-END*/;
+
+const SAGE = {
+  plan: "Sage : il faut d'abord « réapprendre » les natures racine par racine (jokers Z), puis créer chaque compte à la main — extrêmement long et source d'erreurs.",
+  natures: "Sage est livré avec le PCG français : banque en 512, etc. Tout le tableau des natures est à reconstruire pour coller au SYSCOHADA.",
+  import: "Sage : il faut 1) créer un fichier de format .ema décrivant les colonnes, 2) ré-enregistrer l'Excel en .txt tabulé, 3) fournir les deux — et l'ordre des colonnes doit correspondre au masque, sinon le texte se charge à la place des chiffres.",
+};
+
+function PlanApp() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [tab, setTab] = useState("plan");
+  const [mode, setMode] = useState("express");
+  const [drawer, setDrawer] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty("--accent", t.accent);
+    document.documentElement.style.setProperty("--ui-font", FONTS[t.font] || FONTS["Patrick Hand"]);
+    document.body.classList.toggle("clean", !t.sketch);
+    document.body.classList.toggle("density-compact", t.density === "Compact");
+    document.body.classList.toggle("no-annot", !t.annotations);
+  }, [t]);
+
+  return (
+    <React.Fragment>
+      <header className="gal-head">
+        <h1 className="gal-title">Flux — Plan comptable</h1>
+        <div className="gal-sub">SYSCOHADA natif · natures déjà correctes · création & import sans douleur</div>
+      </header>
+
+      <main className="area-wrap" style={{ paddingTop: 14 }}>
+        <div className="sage-ribbon annotation">
+          <span className="tag">vs Sage 100</span>
+          <span className="annot" style={{ fontSize: "1.15em", color: "var(--ink-2)" }}>{SAGE[tab]}</span>
+        </div>
+
+        <Win title="DaCompta — LES ASSOCIÉS SA · Plan comptable">
+          <div className="ws-tabs">
+            {PC_TABS.map((x) => (
+              <div key={x.key} className={"ws-tab" + (x.key === tab ? " on" : "")} onClick={() => setTab(x.key)}>{x.label}</div>
+            ))}
+            <div style={{ flex: 1 }} />
+            {tab === "natures" && (
+              <div className="flex center g8" style={{ paddingRight: 8 }}>
+                <span className="small muted">Mode</span>
+                <div className="modeseg">
+                  <button className={mode === "express" ? "on" : ""} onClick={() => setMode("express")}>Express</button>
+                  <button className={mode === "avance" ? "on" : ""} onClick={() => setMode("avance")}>Avancé</button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {tab === "plan" && <TabPlan onNew={() => setDrawer(true)} />}
+          {tab === "natures" && <TabNatures mode={mode} />}
+          {tab === "import" && <TabImport />}
+
+          <NewAccountDrawer open={drawer} onClose={() => setDrawer(false)} />
+        </Win>
+
+        {/* règles d'intégrité — vs Sage */}
+        <div className="grid" style={{ gridTemplateColumns: "repeat(3,1fr)", marginTop: 18 }}>
+          <div className="card">
+            <div className="card-h"><span className="chip accent">✎ Renommer</span></div>
+            <div className="small">Libre à tout moment — l'intitulé et les options d'un compte restent modifiables.</div>
+            <div className="muted small mt8">Sage : idem.</div>
+          </div>
+          <div className="card">
+            <div className="card-h"><span className="chip">№ Renuméroter</span></div>
+            <div className="small">Libre avant toute écriture. Après mouvement : <b>report sécurisé</b> vers un nouveau n° avec journal d'audit.</div>
+            <div className="muted small mt8">Sage : numéro <b>figé</b> — une faute de frappe oblige à supprimer/recréer.</div>
+          </div>
+          <div className="card">
+            <div className="card-h"><span className="chip warn">🗑 Supprimer</span></div>
+            <div className="small">Bloqué si le compte a été mouvementé (intégrité). On propose alors <b>archiver / masquer</b>.</div>
+            <div className="muted small mt8">Sage : suppression bloquée dès la 1ʳᵉ écriture (même règle).</div>
+          </div>
+        </div>
+        <div style={{ textAlign: "center", marginTop: 14 }} className="annotation">
+          <span className="note">L'intégrité du journal est préservée — mais corriger une erreur ne doit jamais être un cul-de-sac</span>
+        </div>
+      </main>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Style" />
+        <TweakToggle label="Trait esquissé" value={t.sketch} onChange={(v) => setTweak("sketch", v)} />
+        <TweakSelect label="Police" value={t.font} options={Object.keys(FONTS)} onChange={(v) => setTweak("font", v)} />
+        <TweakColor label="Couleur d'accent" value={t.accent}
+          options={["#0f766e", "#1f8a5b", "#c2410c", "#2563eb", "#7c3aed"]}
+          onChange={(v) => setTweak("accent", v)} />
+        <TweakSection label="Mise en page" />
+        <TweakRadio label="Densité" value={t.density} options={["Confort", "Compact"]} onChange={(v) => setTweak("density", v)} />
+        <TweakToggle label="Annotations & comparaison Sage" value={t.annotations} onChange={(v) => setTweak("annotations", v)} />
+      </TweaksPanel>
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<PlanApp />);
+</script>
+</body>
+</html>

@@ -11,6 +11,7 @@ export async function resetDb(): Promise<string> {
   await prisma.importLog.deleteMany();
   await prisma.compte.deleteMany();
   await prisma.budgetPoste.deleteMany();
+  await prisma.soldeAnterieur.deleteMany();
   await prisma.dossier.deleteMany();
   await prisma.nature.deleteMany();
   await prisma.classe.deleteMany();

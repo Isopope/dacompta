@@ -39,19 +39,20 @@ model Nature {
 }
 
 model Dossier {
-  id            String      @id @default(cuid())
-  nom           String
-  ville         String
-  pays          String
-  devise        String
-  exercice      Int
-  referentiel   Referentiel @relation(fields: [referentielId], references: [id])
-  referentielId String
-  comptes       Compte[]
-  imports       ImportLog[]
-  journaux      Journal[]
-  pieces        Piece[]
-  budgetPostes  BudgetPoste[]
+  id               String           @id @default(cuid())
+  nom              String
+  ville            String
+  pays             String
+  devise           String
+  exercice         Int
+  referentiel      Referentiel      @relation(fields: [referentielId], references: [id])
+  referentielId    String
+  comptes          Compte[]
+  imports          ImportLog[]
+  journaux         Journal[]
+  pieces           Piece[]
+  budgetPostes     BudgetPoste[]
+  soldesAnterieurs SoldeAnterieur[]
 }
 
 model Compte {
@@ -116,26 +117,40 @@ model Piece {
 }
 
 model BudgetPoste {
-  id          String   @id @default(cuid())
-  code        String // ex. "605300"
-  libelle     String // ex. "Achat carburant"
-  sens        String // "P" (Produit/recette) ou "C" (Charge/dépense)
-  prevision   Decimal  @default(0)
-  compteLie   String // préfixe compte (ex. "605", "706")
-  dossier     Dossier  @relation(fields: [dossierId], references: [id])
-  dossierId   String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  code      String // ex. "605300"
+  libelle   String // ex. "Achat carburant"
+  sens      String // "P" (Produit/recette) ou "C" (Charge/dépense)
+  prevision Decimal  @default(0)
+  compteLie String // préfixe compte (ex. "605", "706")
+  dossier   Dossier  @relation(fields: [dossierId], references: [id])
+  dossierId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([dossierId, code])
 }
 
-model LigneEcriture {
+// Solde de clôture N-1 par compte (snapshot de l'exercice précédent).
+// Signé débit − crédit, comme `ouverture`. Source du N-1 pour le Compte de
+// résultat (les classes 6/7 n'ont pas de RAN). Le Bilan, lui, garde son N-1
+// déduit du RAN.
+model SoldeAnterieur {
   id           String  @id @default(cuid())
-  piece        Piece   @relation(fields: [pieceId], references: [id], onDelete: Cascade)
-  pieceId      String
   compteNumero String // référence Compte.numero (pas de FK formelle)
-  libelleLigne String
+  montant      Decimal @default(0) // solde N-1 signé débit − crédit
+  dossier      Dossier @relation(fields: [dossierId], references: [id])
+  dossierId    String
+
+  @@unique([dossierId, compteNumero])
+}
+
+model LigneEcriture {
+  id                String  @id @default(cuid())
+  piece             Piece   @relation(fields: [pieceId], references: [id], onDelete: Cascade)
+  pieceId           String
+  compteNumero      String // référence Compte.numero (pas de FK formelle)
+  libelleLigne      String
   debit             Decimal @default(0)
   credit            Decimal @default(0)
   ordre             Int

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DaCompta — Ma journée (BatiScript)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/bs/colors_and_type.css">
+<link rel="stylesheet" href="assets/bs/app.css">
+<style>
+  /* compléments spécifiques DaCompta, dans l'esprit du DS */
+  .da-alert { display:flex; align-items:center; gap:14px; background:linear-gradient(100deg, var(--bs-indigo) 0%, var(--bs-indigo-700) 100%);
+    color:#fff; border-radius:16px; padding:16px 20px; margin-bottom:24px; box-shadow:var(--bs-shadow-md); }
+  .da-alert .ai { width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+  .da-alert b { font-family:var(--bs-font-display); }
+  .da-alert .sp { flex:1; }
+  .da-grid2 { display:grid; grid-template-columns: 1.55fr 1fr; gap:16px; margin-bottom:24px; align-items:start; }
+  .da-todo { display:flex; gap:14px; padding:14px 16px; border-radius:13px; border:1px solid var(--bs-border); background:#fff; align-items:flex-start; }
+  .da-todo + .da-todo { margin-top:12px; }
+  .da-todo .ic { width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+  .da-todo h4 { font-family:var(--bs-font-display); font-weight:600; font-size:15px; color:var(--bs-navy); margin:0 0 3px; }
+  .da-todo p { font-size:13px; color:var(--bs-fg-3); margin:0; line-height:1.45; }
+  .da-todo .go { margin-left:auto; align-self:center; }
+  .da-jr { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; }
+  .da-jr-card { border:1px solid var(--bs-border); border-radius:13px; background:#fff; padding:13px 15px; cursor:pointer; transition:all .16s; box-shadow:var(--bs-shadow-sm); }
+  .da-jr-card:hover { border-color:var(--bs-indigo-300); transform:translateY(-2px); box-shadow:var(--bs-shadow-md); }
+  .da-jr-code { font-family:var(--bs-font-display); font-weight:700; color:var(--bs-indigo); font-size:16px; }
+  .da-jr-name { font-size:12.5px; color:var(--bs-fg-3); }
+  .da-copilote { padding:0; overflow:hidden; }
+  .da-cop-head { background:var(--bs-navy); color:#fff; padding:14px 18px; display:flex; align-items:center; gap:10px; font-family:var(--bs-font-display); font-weight:600; }
+  .da-cop-body { padding:16px 18px; display:flex; flex-direction:column; gap:12px; }
+  .da-bubble { background:var(--bs-indigo-25); border:1px solid var(--bs-border); border-radius:12px; padding:12px 14px; font-size:13.5px; color:var(--bs-fg-2); line-height:1.5; }
+  .da-prop { border:1px solid var(--bs-border); border-radius:12px; padding:12px 14px; }
+  .da-prop .l { font-size:11.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--bs-fg-3); font-weight:600; }
+  .da-prop .v { font-family:var(--bs-font-display); font-weight:600; color:var(--bs-navy); margin:3px 0 10px; }
+  .da-sectitle { font-family:var(--bs-font-display); font-weight:600; font-size:16px; color:var(--bs-navy); margin:0 0 14px; display:flex; align-items:center; gap:10px; }
+  .da-sectitle .hint { font-family:var(--bs-font-body); font-weight:400; font-size:12.5px; color:var(--bs-fg-3); }
+</style>
+</head>
+<body>
+<div class="ap-app">
+  <!-- TOP BAR -->
+  <header class="ap-top">
+    <div class="ap-top-logo">
+      <div style="width:32px;height:32px;border-radius:9px;background:var(--bs-indigo);display:flex;align-items:center;justify-content:center;font-family:var(--bs-font-display);font-weight:700;color:#fff;font-size:15px;">Dₐ</div>
+      <b>DaCompta</b>
+    </div>
+    <div class="ap-proj">
+      <i data-ico="building"></i>
+      <div>Cabinet Diallo &amp; Co<small>14 dossiers actifs</small></div>
+      <i data-ico="chevron-down"></i>
+    </div>
+    <div class="ap-top-spacer"></div>
+    <div class="ap-search"><i data-ico="search"></i><input placeholder="Rechercher un dossier, une pièce, un compte…" /></div>
+    <button class="ap-top-ico"><i data-ico="bell"></i><span class="dot"></span></button>
+    <div class="ap-avatar">AD</div>
+  </header>
+
+  <div class="ap-body">
+    <!-- RAIL -->
+    <nav class="ap-rail">
+      <div class="ap-rail-section">Pilotage</div>
+      <button class="ap-nav active"><i data-ico="gauge"></i> Ma journée</button>
+      <button class="ap-nav"><i data-ico="folder"></i> Mes dossiers <span class="count">14</span></button>
+      <div class="ap-rail-section">Dossier courant</div>
+      <button class="ap-nav"><i data-ico="inbox"></i> Pièces reçues <span class="count">23</span></button>
+      <button class="ap-nav"><i data-ico="pen"></i> Écritures</button>
+      <button class="ap-nav"><i data-ico="book"></i> Journaux</button>
+      <button class="ap-nav"><i data-ico="bank"></i> Banques</button>
+      <button class="ap-nav"><i data-ico="file"></i> États &amp; DSF</button>
+      <div class="ap-rail-foot">
+        <button class="ap-nav"><i data-ico="sparkles"></i> Assistant IA</button>
+        <button class="ap-nav"><i data-ico="gear"></i> Paramètres</button>
+      </div>
+    </nav>
+
+    <!-- MAIN -->
+    <main class="ap-main">
+      <div class="ap-head">
+        <div class="ap-crumb">Cabinet Diallo &amp; Co <i data-ico="chevron-right" style="width:12px;height:12px;"></i> Pilotage</div>
+        <div class="ap-head-row">
+          <h1 class="ap-title">Bonjour Awa</h1>
+          <div class="ap-head-actions">
+            <button class="ap-btn ghost"><i data-ico="upload"></i> Importer un relevé</button>
+            <button class="ap-btn primary"><i data-ico="plus"></i> Saisir une pièce</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ap-content">
+        <!-- bandeau copilote -->
+        <div class="da-alert">
+          <div class="ai"><i data-ico="sparkles"></i></div>
+          <div class="sp"><b>19 des 23 pièces pré-imputées</b> (confiance &gt; 90 %). Validez en lot — je laisse les 4 douteuses pour vous.</div>
+          <button class="ap-btn success sm"><i data-ico="check"></i> Valider les 19</button>
+          <button class="ap-btn ghost sm" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25);color:#fff;">Revoir</button>
+        </div>
+
+        <!-- KPIs -->
+        <div class="ap-kpis">
+          <div class="ap-kpi">
+            <div class="ap-kpi-top"><div class="ap-kpi-ico" style="background:var(--bs-indigo-50);color:var(--bs-indigo);"><i data-ico="folder"></i></div></div>
+            <div class="ap-kpi-val">14</div><div class="ap-kpi-lbl">Dossiers actifs</div>
+          </div>
+          <div class="ap-kpi">
+            <div class="ap-kpi-top"><div class="ap-kpi-ico" style="background:var(--bs-warning-bg);color:#B57A00;"><i data-ico="inbox"></i></div><span class="ap-kpi-trend" style="color:#B57A00;">à traiter</span></div>
+            <div class="ap-kpi-val">23</div><div class="ap-kpi-lbl">Pièces reçues</div>
+          </div>
+          <div class="ap-kpi">
+            <div class="ap-kpi-top"><div class="ap-kpi-ico" style="background:var(--bs-danger-bg);color:#C32232;"><i data-ico="clock"></i></div><span class="ap-kpi-trend" style="color:#C32232;">&lt; 7 jours</span></div>
+            <div class="ap-kpi-val">3</div><div class="ap-kpi-lbl">Échéances fiscales</div>
+          </div>
+          <div class="ap-kpi">
+            <div class="ap-kpi-top"><div class="ap-kpi-ico" style="background:var(--bs-danger-bg);color:#C32232;"><i data-ico="warning"></i></div></div>
+            <div class="ap-kpi-val">4</div><div class="ap-kpi-lbl">Anomalies détectées</div>
+          </div>
+        </div>
+
+        <!-- à traiter + copilote -->
+        <div class="da-grid2">
+          <div>
+            <h3 class="da-sectitle">À traiter aujourd'hui <span class="hint">· trié par urgence (IA)</span></h3>
+            <div class="da-todo">
+              <div class="ic" style="background:var(--bs-warning-bg);color:#B57A00;"><i data-ico="inbox"></i></div>
+              <div><h4>23 pièces reçues</h4><p>photos WhatsApp, scans, relevés — pré-imputées, à valider</p></div>
+              <button class="ap-btn primary sm go">Traiter l'inbox</button>
+            </div>
+            <div class="da-todo">
+              <div class="ic" style="background:var(--bs-danger-bg);color:#C32232;"><i data-ico="clock"></i></div>
+              <div><h4>3 échéances &lt; 7 jours</h4><p>DSF Les Associés (15) · TVA BTP Sahel (20) · CNSS (18)</p></div>
+              <button class="ap-btn ghost sm go">Agenda fiscal</button>
+            </div>
+            <div class="da-todo">
+              <div class="ic" style="background:var(--bs-danger-bg);color:#C32232;"><i data-ico="warning"></i></div>
+              <div><h4>4 anomalies</h4><p>doublon facture · TVA incohérente · solde caisse négatif évité</p></div>
+              <button class="ap-btn ghost sm go">Vérifier</button>
+            </div>
+          </div>
+
+          <div class="ap-card da-copilote">
+            <div class="da-cop-head"><i data-ico="sparkles"></i> Copilote</div>
+            <div class="da-cop-body">
+              <div class="da-bubble">J'ai repéré 4 pièces à imputer et 1 anomalie TVA. Je prépare des propositions — vous validez.</div>
+              <div class="da-prop">
+                <div class="l">Proposition</div>
+                <div class="v">FRN-208 → 626 / 445</div>
+                <div style="display:flex;gap:8px;"><button class="ap-btn primary sm">Valider</button><button class="ap-btn ghost sm">Voir</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- mes dossiers -->
+        <h3 class="da-sectitle">Mes dossiers <span class="hint">· avancement de la saisie du mois</span></h3>
+        <div class="ap-card" style="margin-bottom:24px;">
+          <table class="ap-table">
+            <thead><tr><th>Société</th><th>Secteur</th><th>Avancement</th><th>À traiter</th><th>Prochaine échéance</th></tr></thead>
+            <tbody>
+              <tr><td><div class="ap-proj-name">Les Associés SA</div><div class="ap-proj-sub">Transport · Lomé</div></td><td>Réel Normal · XOF</td>
+                <td><div class="ap-progress-row"><div class="ap-progress"><div style="width:62%"></div></div><b>62%</b></div></td>
+                <td><span class="ap-badge warning"><i data-ico="inbox"></i> 8 pièces</span></td><td><span class="ap-badge danger"><i data-ico="clock"></i> DSF · 15 mai</span></td></tr>
+              <tr><td><div class="ap-proj-name">Ivoire Négoce</div><div class="ap-proj-sub">Commerce · Abidjan</div></td><td>Réel Normal · XOF</td>
+                <td><div class="ap-progress-row"><div class="ap-progress"><div style="width:100%"></div></div><b>100%</b></div></td>
+                <td><span class="ap-badge success"><i data-ico="check"></i> à jour</span></td><td><span style="color:var(--bs-fg-3)">—</span></td></tr>
+              <tr><td><div class="ap-proj-name">BTP Sahel SARL</div><div class="ap-proj-sub">BTP · Ouagadougou</div></td><td>Réel Normal · XOF</td>
+                <td><div class="ap-progress-row"><div class="ap-progress"><div style="width:38%"></div></div><b>38%</b></div></td>
+                <td><span class="ap-badge warning"><i data-ico="inbox"></i> 12 pièces</span></td><td><span class="ap-badge danger"><i data-ico="clock"></i> TVA · 20 mai</span></td></tr>
+              <tr><td><div class="ap-proj-name">Pharma Plus</div><div class="ap-proj-sub">Officine · Dakar</div></td><td>Réel Simplifié · XOF</td>
+                <td><div class="ap-progress-row"><div class="ap-progress"><div style="width:85%"></div></div><b>85%</b></div></td>
+                <td><span class="ap-badge warning"><i data-ico="inbox"></i> 3 pièces</span></td><td><span style="color:var(--bs-fg-3)">—</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- journaux familiers -->
+        <h3 class="da-sectitle">Journaux de saisie <span class="hint">· votre environnement habituel</span></h3>
+        <div class="da-jr">
+          <div class="da-jr-card"><div class="da-jr-code">ACH</div><div class="da-jr-name">Achats</div></div>
+          <div class="da-jr-card"><div class="da-jr-code">VT</div><div class="da-jr-name">Ventes</div></div>
+          <div class="da-jr-card"><div class="da-jr-code">CAI</div><div class="da-jr-name">Caisse</div></div>
+          <div class="da-jr-card"><div class="da-jr-code">BIMA</div><div class="da-jr-name">Banque</div></div>
+          <div class="da-jr-card"><div class="da-jr-code">OD</div><div class="da-jr-name">Opér. diverses</div></div>
+          <div class="da-jr-card"><div class="da-jr-code">PE</div><div class="da-jr-name">Paie</div></div>
+          <div class="da-jr-card"><div class="da-jr-code">RAN</div><div class="da-jr-name">À-nouveau</div></div>
+          <div class="da-jr-card"><div class="da-jr-code">BTCI</div><div class="da-jr-name">Banque 2</div></div>
+        </div>
+
+        <!-- états -->
+        <h3 class="da-sectitle">États &amp; documents</h3>
+        <div class="ap-docgrid">
+          <div class="ap-doc"><div class="ap-doc-ico"><i data-ico="file"></i></div><div class="ap-doc-name">Balance générale</div><div class="ap-doc-meta">prête · Janvier 2020</div></div>
+          <div class="ap-doc"><div class="ap-doc-ico"><i data-ico="book"></i></div><div class="ap-doc-name">Grand livre</div><div class="ap-doc-meta">prêt</div></div>
+          <div class="ap-doc"><div class="ap-doc-ico"><i data-ico="file"></i></div><div class="ap-doc-name">Bilan &amp; Résultat</div><div class="ap-doc-meta">SYSCOHADA · prêt</div></div>
+          <div class="ap-doc"><div class="ap-doc-ico" style="background:var(--bs-warning-bg);color:#B57A00;"><i data-ico="clock"></i></div><div class="ap-doc-name">Liasse DSF</div><div class="ap-doc-meta">à venir</div></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+// Jeu d'icônes inline dans l'esprit FontAwesome (à remplacer par la vraie lib FA en prod)
+const ICONS = {
+  building:'<path d="M3 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M15 21h4a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-4M6 7h2M6 11h2M6 15h2"/>',
+  'chevron-down':'<path d="M6 9l6 6 6-6"/>',
+  'chevron-right':'<path d="M9 6l6 6-6 6"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/>',
+  bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a2 2 0 0 0 3.4 0"/>',
+  gauge:'<path d="M12 13l4-4M3 18a9 9 0 1 1 18 0z"/>',
+  folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  inbox:'<path d="M3 13l3 0 2 3h8l2-3 3 0M3 13l3-8h12l3 8v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  pen:'<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V4a2 2 0 0 0-2-2H6.5A2.5 2.5 0 0 0 4 4.5z"/>',
+  bank:'<path d="M3 10h18M5 10v8M9 10v8M15 10v8M19 10v8M3 21h18M12 3l9 5H3z"/>',
+  file:'<path d="M14 3v5h5M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>',
+  sparkles:'<path d="M12 3l1.8 4.5L18 9l-4.2 1.5L12 15l-1.8-4.5L6 9l4.2-1.5zM19 15l.9 2.2L22 18l-2.1.8L19 21l-.9-2.2L16 18l2.1-.8z"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 0 1-4 0v-.1A1.6 1.6 0 0 0 7 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H1a2 2 0 0 1 0-4h.1A1.6 1.6 0 0 0 4.6 7a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V1a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H23a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 9l5-5 5 5M12 4v12"/>',
+  check:'<path d="M20 6L9 17l-5-5"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>',
+  warning:'<path d="M12 3l10 18H2zM12 9v5M12 18h.01"/>'
+};
+document.querySelectorAll('[data-ico]').forEach(el=>{
+  const n=el.getAttribute('data-ico'); if(!ICONS[n])return;
+  el.outerHTML=`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[n]}</svg>`;
+});
+</script>
+</body>
+</html>

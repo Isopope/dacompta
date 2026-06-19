@@ -1,1 +1,93 @@
-@AGENTS.md
+# DaCompta — POC Comptabilité SYSCOHADA
+
+## Projet
+POC de comptabilité SYSCOHADA révisé (OHADA). Stack : **Next.js 15 App Router + Prisma + SQLite + Vitest + TypeScript**.
+
+## Design System
+```css
+:root { --ink:#1f2328; --muted:#6b7280; --line:#e5e7eb; --accent:#0f766e; --bg:#f8f9fa; --panel:#fff; }
+```
+- Accent teal `#0f766e`, fond clair, polices system‑ui.
+- Classes CSS utiles : `.container`, `.btn`, `.btn.primary`, `.input`, `.badge`, `.badge.warn`, `.muted`, `.mono`, `.chip`, `.drawer`, `.drawer-scrim`, `.seg`, `.tabs`, `.tab`, `.field`.
+
+## Architecture
+
+### Pages (toutes avec App Router, `page.tsx`)
+- `/` → redirige vers `/plan-comptable`
+- `/plan-comptable` → liste hiérarchique, création, import
+- `/ecritures` → saisie pièces + validation
+- `/budget` → postes budgétaires, barres de consommation
+- `/etats` → Balance 6 colonnes, Bilan, CR, TFT (onglets)
+
+### Layout
+`src/app/layout.tsx` : nav horizontale DaCompta / Plan comptable / Écritures / Budget / États & documents
+
+### Serveur
+Dossier `src/server/` : server actions pur (`"use server"`).
+Ne PAS mettre de Prisma calls dans les composants client. Passer par les server actions.
+
+### Modèles Prisma (SQLite)
+
+| Modèle | Rôle |
+|--------|------|
+| **Dossier** | Société cliente (nom, exercice, devise) |
+| **Referentiel** | Référentiel SYSCOHADA révisé |
+| **Compte** | Plan comptable (numéro 6 chiffres, intitulé, classe, nature) |
+| **Journal** | Code (ACH/VT/CAI/BIMA/OD/PE/RAN) + libellé |
+| **Piece** | Pièce comptable (numéro, date, fournisseur, statut: BROUILLON/VALIDEE/ANNULEE, journalId) |
+| **LigneEcriture** | Ligne (pieceId, compteNumero, libelleLigne, debit, credit, ordre) |
+| **BudgetPoste** | Poste budgétaire (code, libelle, sens P/C, prevision, compteLie) |
+| **SoldeAnterieur** | Snapshots N-1 (compteNumero, montant signé débit−crédit) |
+| **ImportLog** | Historique des imports plan comptable |
+
+### Services existants
+| Fichier | Fonction |
+|---------|----------|
+| `src/lib/db.ts` | Singleton PrismaClient |
+| `src/server/balance.ts` | Balance générale, Grand Livre |
+| `src/server/pieces.ts` | CRUD pièces + lignes |
+| `src/server/comptes.ts` | CRUD plan comptable |
+| `src/server/budget.ts` | Postes budgétaires (réalisé déduit des écritures) |
+| `src/server/import.ts` | Import plan comptable CSV |
+| `src/lib/etats/etats-financiers.ts` | Bilan, CR, TFT à partir de la balance |
+| `src/lib/syscohada/referentiel.ts` | Données SYSCOHADA révisé |
+| `src/lib/syscohada/compte-logic.ts` | Logique métier comptes (collectifs, analyse classe) |
+
+### Conventions code
+- Code commenté en français.
+- Commits conventionnels : `feat:`, `fix:`, `chore:`.
+- TDD obligatoire : tests Vitest `*.test.ts` dans `src/server/` ou `src/lib/`.
+
+### Seed de dev
+Prisma seed crée un dossier "Les Associés SA" (Lomé, Togo) avec :
+- 16 comptes, 4 écritures, RAN
+- Capital 50M FCFA, Emprunt 15M, Report-à-nouveau -6M
+- Immobilisation 54M, Trésorerie ~9,6M
+- 5 journaux (ACH, VT, CAI, OD, RAN)
+- Postes budgétaires (carburant, eau, loyer, transport, honoraires, vente marchandises)
+
+## Tests
+```bash
+npx vitest run        # tout
+npx vitest --watch    # mode watch
+```
+BDD : test.db avec resetDb() dans `src/server/test-setup.ts`.
+60 tests verts (balance, états, TFT, budget, comptes, import, pièces).
+
+## Build
+```bash
+npm run build           # Next.js build
+npm run typecheck       # tsc --noEmit
+npx next dev -p 3000    # dev server
+```
+Build et typecheck doivent passer avant tout commit.
+
+## Dashboard (nouvelle feature)
+S'inspirer d'Odoo Accounting : remplacer la page d'accueil par un dashboard avec :
+1. Cartes par journal (code, libelle, nb pièces, nb brouillons, solde total, dernière date)
+2. KPIs globaux (résultat net, trésorerie, total bilan)
+3. Liens rapides vers chaque page
+
+Server action `src/server/dashboard.ts` → `getDashboardStats(dossierId)`.
+Page `src/app/page.tsx` → composant client Dashboard avec les stats.
+Tests `src/server/dashboard.test.ts` avant l'implémentation.

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DaCompta — Spécification : Ma journée</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+  :root { --accent:#0f766e; --ink:#1c1c1c; --ink2:#52525b; --ink3:#8a8a8a; --line:#e3e1da; --paper:#fbfaf7; --soft:#e8f1ef; --warn:#c2410c; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font-family:'Inter',sans-serif; font-size:15px; line-height:1.55; }
+  .doc { max-width:860px; margin:0 auto; padding:48px 40px 100px; background:#fff; box-shadow:0 1px 0 var(--line); }
+  h1 { font-size:2em; margin:0 0 4px; letter-spacing:-.02em; }
+  .sub { color:var(--ink2); font-size:1.05em; margin-bottom:6px; }
+  .meta { color:var(--ink3); font-size:.85em; border-bottom:2px solid var(--line); padding-bottom:18px; margin-bottom:26px; }
+  h2 { font-size:1.3em; margin:34px 0 10px; padding-top:14px; border-top:1px solid var(--line); letter-spacing:-.01em; }
+  h2 .n { color:var(--accent); font-variant-numeric:tabular-nums; margin-right:8px; }
+  h3 { font-size:1.05em; margin:18px 0 6px; }
+  p { margin:8px 0; color:var(--ink); }
+  ul { margin:8px 0; padding-left:20px; } li { margin:4px 0; }
+  code, .mono { font-family:'Space Mono',monospace; font-size:.86em; background:var(--soft); padding:1px 5px; border-radius:4px; }
+  .tag { display:inline-block; font-size:.72em; font-weight:600; padding:1px 8px; border-radius:200px; vertical-align:middle; }
+  .p1 { background:var(--accent); color:#fff; } .p2 { background:var(--soft); color:var(--accent); } .p3 { background:#f0efe9; color:var(--ink2); }
+  .new { background:#fff3e6; color:var(--warn); } .keep { background:#eaf6f2; color:var(--accent); }
+  table { width:100%; border-collapse:collapse; margin:12px 0; font-size:.92em; }
+  th { text-align:left; background:var(--soft); padding:8px 10px; font-weight:600; border:1px solid var(--line); }
+  td { padding:8px 10px; border:1px solid var(--line); vertical-align:top; }
+  .lead { background:var(--soft); border-left:4px solid var(--accent); padding:12px 16px; border-radius:0 8px 8px 0; margin:14px 0; }
+  .task { display:flex; gap:10px; align-items:flex-start; padding:7px 0; border-bottom:1px dashed var(--line); }
+  .task .box { width:15px; height:15px; border:2px solid var(--ink3); border-radius:4px; flex:none; margin-top:3px; }
+  .task .e { margin-left:auto; font-size:.72em; color:var(--ink3); white-space:nowrap; }
+  .legend { font-size:.82em; color:var(--ink3); margin:6px 0 0; }
+  @media print { body{background:#fff;} .doc{box-shadow:none; max-width:none;} }
+</style>
+</head>
+<body>
+<div class="doc">
+  <h1>Spécification UX — « Ma journée »</h1>
+  <div class="sub">Collaborateur de cabinet · hiérarchie d'information & backlog d'implémentation</div>
+  <div class="meta">DaCompta · v1 · document de travail destiné à la phase d'implémentation — gabarit réutilisable pour les autres écrans</div>
+
+  <div class="lead"><b>Principe directeur.</b> Ne pas dépayser le comptable OHADA : son environnement Sage (journaux, balance, états, vocabulaire SYSCOHADA) reste intact et accessible. On <b>ajoute une couche d'assistance</b> par-dessus (inbox de pièces, multi-dossiers, copilote IA) — jamais à la place. La hiérarchie ci-dessous traduit cette intention en priorités d'affichage et règles d'accès.</div>
+
+  <h2><span class="n">1.</span> Objectif de l'écran</h2>
+  <p>Donner au collaborateur, dès l'ouverture, la réponse à <b>« qu'est-ce qui est urgent, sur quel dossier, et qu'est-ce que je traite maintenant ? »</b> — sans l'obliger à parcourir les menus. L'écran agrège le travail entrant plutôt que d'imposer une saisie journal par journal.</p>
+
+  <h2><span class="n">2.</span> Hiérarchie des zones</h2>
+  <p>Quatre niveaux de priorité visuelle, du plus saillant au plus discret :</p>
+  <table>
+    <tr><th style="width:34px">Niv.</th><th>Zone</th><th>Rôle</th><th style="width:70px">Priorité</th></tr>
+    <tr><td>0</td><td>Coque globale (sidebar + commutateur de dossier + barre du haut + rail copilote)</td><td>Navigation permanente, contexte (cabinet / dossier courant)</td><td><span class="tag p1">P0</span></td></tr>
+    <tr><td>1</td><td>Actions primaires : <code>+ Saisir une pièce</code>, <code>Importer un relevé</code></td><td>Démarrer le travail en 1 clic — boutons évidents (pas de ⌘K en principal)</td><td><span class="tag p1">P0</span></td></tr>
+    <tr><td>2</td><td>« À traiter aujourd'hui » : pièces reçues · échéances &lt; 7 j · anomalies</td><td>Bloc d'attention n°1, trié par urgence (IA)</td><td><span class="tag p1">P0</span></td></tr>
+    <tr><td>3</td><td>« Mes dossiers » (portefeuille, avancement de saisie)</td><td>Vue multi-clients, bascule de contexte</td><td><span class="tag p2">P1</span></td></tr>
+    <tr><td>4</td><td>« Journaux de saisie » (ACH, VT, CAI, BIMA…)</td><td>Accès <b>familier</b> Sage — secondaire mais rassurant, toujours présent</td><td><span class="tag p2">P1</span></td></tr>
+    <tr><td>5</td><td>« États & documents »</td><td>Production de documents à la demande</td><td><span class="tag p3">P2</span></td></tr>
+    <tr><td>—</td><td>Copilote IA (rail droit)</td><td>Propositions (validation en lot), rappels — <b>repliable</b></td><td><span class="tag p2">P1</span></td></tr>
+  </table>
+
+  <h2><span class="n">3.</span> Inventaire des éléments & comportements</h2>
+  <table>
+    <tr><th>Élément</th><th>Contenu / état</th><th>Comportement</th><th style="width:64px">Statut</th></tr>
+    <tr><td>Commutateur de dossier</td><td>Dossier courant + « 14 dossiers »</td><td>Ouvre la recherche/sélection de dossier ; tout le dossier-courant en dépend</td><td><span class="tag keep">existant</span></td></tr>
+    <tr><td>Carte « pièces reçues »</td><td>Compteur (23), sources (WhatsApp/scan/relevé)</td><td>→ ouvre l'inbox de pièces (revue IA)</td><td><span class="tag new">à concevoir</span></td></tr>
+    <tr><td>Carte « échéances &lt; 7 j »</td><td>Liste DSF/TVA/CNSS datée</td><td>→ agenda fiscal multi-dossiers</td><td><span class="tag new">à concevoir</span></td></tr>
+    <tr><td>Carte « anomalies »</td><td>Compteur (4) + types</td><td>→ file « À vérifier »</td><td><span class="tag p2">esquissé</span></td></tr>
+    <tr><td>Table « Mes dossiers »</td><td>Société, secteur, à-traiter, échéance</td><td>Tri par urgence ; « Ouvrir » charge le dossier</td><td><span class="tag p2">esquissé</span></td></tr>
+    <tr><td>Grille « Journaux »</td><td>8 journaux SYSCOHADA</td><td>Ouvre la saisie du journal (écran existant)</td><td><span class="tag keep">existant</span></td></tr>
+    <tr><td>Rangée « États & documents »</td><td>Docs prêts vs à venir (◌)</td><td>→ module États (génération)</td><td><span class="tag new">module dédié</span></td></tr>
+    <tr><td>Copilote</td><td>Pré-imputation 19/23, rappels</td><td>Validation en lot ; question libre</td><td><span class="tag p2">esquissé</span></td></tr>
+  </table>
+
+  <h2><span class="n">4.</span> Règles d'accès & rôles</h2>
+  <ul>
+    <li><b>Contexte cabinet vs dossier.</b> « Mes dossiers » et l'agenda sont transverses (cabinet) ; journaux, états, pièces sont relatifs au <b>dossier courant</b> sélectionné.</li>
+    <li><b>Rôles.</b> <i>Collaborateur</i> : saisit, valide les pièces à forte confiance. <i>Chef de mission</i> : révise, valide les états, débloque les anomalies, accède au cockpit multi-dossiers complet. → prévoir un niveau d'autorisation par action.</li>
+    <li><b>IA = suggestion, l'humain valide.</b> Auto-validation possible au-dessus d'un seuil de confiance, avec journal d'audit et annulation. En dessous → file manuelle.</li>
+    <li><b>Hors-ligne d'abord.</b> Saisie et consultation disponibles hors connexion ; synchronisation à la reconnexion (indicateur permanent).</li>
+  </ul>
+
+  <h2><span class="n">5.</span> Interactions clés</h2>
+  <ul>
+    <li>Ouverture → focus visuel sur « À traiter aujourd'hui ».</li>
+    <li>« Traiter l'inbox » → revue séquentielle des pièces pré-imputées → validation unitaire ou en lot.</li>
+    <li>Changement de dossier → rechargement contextuel (journaux, soldes, échéances) sans quitter « Ma journée ».</li>
+    <li>Copilote → action proposée toujours confirmée par un clic explicite.</li>
+  </ul>
+
+  <h2><span class="n">6.</span> Backlog d'implémentation</h2>
+  <p class="legend">Estimation indicative : ● petit · ●● moyen · ●●● gros — à affiner.</p>
+
+  <h3>Navigation & coque</h3>
+  <div class="task"><span class="box"></span><div>Coque globale responsive (sidebar + rail repliable + barre haute) avec état persistant</div><span class="e">●●</span></div>
+  <div class="task"><span class="box"></span><div>Commutateur de dossier + chargement contextuel du dossier courant</div><span class="e">●●</span></div>
+  <div class="task"><span class="box"></span><div>Système d'autorisations par rôle (collaborateur / chef de mission)</div><span class="e">●●</span></div>
+
+  <h3>Spine « Ma journée »</h3>
+  <div class="task"><span class="box"></span><div>Agrégateur « À traiter » : requêtes pièces / échéances / anomalies, tri par urgence</div><span class="e">●●●</span></div>
+  <div class="task"><span class="box"></span><div>Moteur d'échéances fiscales par pays (DSF, TVA, CNSS, IS) + agenda</div><span class="e">●●●</span></div>
+  <div class="task"><span class="box"></span><div>Détecteur d'anomalies (doublons, TVA, solde caisse négatif) → file « À vérifier »</div><span class="e">●●</span></div>
+
+  <h3>Inbox de pièces (cœur)</h3>
+  <div class="task"><span class="box"></span><div>Canaux d'entrée : upload, scan mobile, <b>WhatsApp</b>, e-mail, relevés bancaires/Mobile Money</div><span class="e">●●●</span></div>
+  <div class="task"><span class="box"></span><div>OCR + pré-imputation IA (compte, TVA, tiers, ventilation analytique) avec score de confiance</div><span class="e">●●●</span></div>
+  <div class="task"><span class="box"></span><div>Écran de revue + validation en lot / unitaire + journal d'audit</div><span class="e">●●</span></div>
+
+  <h3>Familier (à intégrer, pas à réinventer)</h3>
+  <div class="task"><span class="box"></span><div>Accès direct aux 8 journaux (écrans de saisie déjà maquettés)</div><span class="e">●</span></div>
+  <div class="task"><span class="box"></span><div>Lien vers le module États & documents</div><span class="e">●</span></div>
+
+  <h3>Copilote</h3>
+  <div class="task"><span class="box"></span><div>Propositions contextuelles + validation en lot au-dessus du seuil de confiance</div><span class="e">●●</span></div>
+  <div class="task"><span class="box"></span><div>Rappels d'échéances proactifs</div><span class="e">●</span></div>
+
+  <h2><span class="n">7.</span> Extension du gabarit</h2>
+  <p>Ce document est le modèle. À décliner sur les autres écrans déjà maquettés (Plan comptable, Structure, chaque journal, TVA, Clôture, module États) : pour chacun, lister <i>zones → hiérarchie → inventaire → règles → interactions → tâches</i>. Prochain à documenter en priorité : <b>l'inbox de pièces</b> (non encore conçu) et le <b>module États & documents</b>.</p>
+</div>
+</body>
+</html>

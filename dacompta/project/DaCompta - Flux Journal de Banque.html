@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DaCompta — Flux : Journal de Banque</title>
+<link rel="stylesheet" href="styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  .sage-ribbon { display: flex; align-items: flex-start; gap: 10px; max-width: 1180px; margin: 0 auto 14px; padding: 10px 16px; border: 2px dashed var(--danger); border-radius: 12px; background: color-mix(in srgb, var(--danger) 7%, white); }
+  .sage-ribbon .tag { flex: none; font-size: .78em; padding: 2px 9px; border-radius: 200px; background: var(--danger); color: #fff; }
+  body.no-annot .sage-ribbon { display: none; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="shared.jsx"></script>
+<script type="text/babel" src="banque.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+const FONTS = { "Patrick Hand": "'Patrick Hand', cursive", "Kalam": "'Kalam', cursive", "Shantell Sans": "'Shantell Sans', cursive" };
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accent": "#0f766e",
+  "sketch": true,
+  "font": "Kalam",
+  "density": "Compact",
+  "annotations": true
+}/*EDITMODE-END*/;
+
+function BanqueApp() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  useEffect(() => {
+    document.documentElement.style.setProperty("--accent", t.accent);
+    document.documentElement.style.setProperty("--ui-font", FONTS[t.font] || FONTS["Patrick Hand"]);
+    document.body.classList.toggle("clean", !t.sketch);
+    document.body.classList.toggle("density-compact", t.density === "Compact");
+    document.body.classList.toggle("no-annot", !t.annotations);
+  }, [t]);
+
+  return (
+    <React.Fragment>
+      <header className="gal-head">
+        <h1 className="gal-title">Flux — Journal de Banque</h1>
+        <div className="gal-sub">Banque BIMA 521100 · contrepartie auto (fusionnée) · régularisation IA · rapprochement activé</div>
+      </header>
+
+      <main className="area-wrap" style={{ paddingTop: 14 }}>
+        <div className="sage-ribbon annotation">
+          <span className="tag">vs Sage 100</span>
+          <span className="annot" style={{ fontSize: "1.15em", color: "var(--ink-2)" }}>
+            Sage : la contrepartie auto et la fusion des lignes fonctionnent grâce au paramétrage du journal ; les charges payées d'avance (loyer 6 mois) doivent être repérées et régularisées manuellement plus tard. Ici, DaCompta détecte et propose la régularisation tout de suite.
+          </span>
+        </div>
+
+        <Win title="DaCompta — LES ASSOCIÉS SA · Journal BQLA">
+          <BanqueWorkspace />
+        </Win>
+
+        <div style={{ textAlign: "center", marginTop: 14 }} className="annotation">
+          <span className="note">L'échéance d'emprunt (capital + intérêts) se solde par une contrepartie banque unique de 825 000</span>
+        </div>
+      </main>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Style" />
+        <TweakToggle label="Trait esquissé" value={t.sketch} onChange={(v) => setTweak("sketch", v)} />
+        <TweakSelect label="Police" value={t.font} options={Object.keys(FONTS)} onChange={(v) => setTweak("font", v)} />
+        <TweakColor label="Couleur d'accent" value={t.accent}
+          options={["#0f766e", "#1f8a5b", "#c2410c", "#2563eb", "#7c3aed"]}
+          onChange={(v) => setTweak("accent", v)} />
+        <TweakSection label="Mise en page" />
+        <TweakRadio label="Densité" value={t.density} options={["Confort", "Compact"]} onChange={(v) => setTweak("density", v)} />
+        <TweakToggle label="Annotations & comparaison Sage" value={t.annotations} onChange={(v) => setTweak("annotations", v)} />
+      </TweaksPanel>
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<BanqueApp />);
+</script>
+</body>
+</html>

@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DaCompta — Référentiel SYSCOHADA</title>
+<link rel="stylesheet" href="styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  .ref { max-width: 1180px; margin: 0 auto; padding: 6px 28px 120px; }
+  .ref-hero { display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:6px; }
+  .ref-logo { width:58px; height:58px; border:2.5px solid var(--line); border-radius:16px 22px 14px 20px / 20px 14px 22px 16px; display:grid; place-items:center; background:var(--accent); color:#fff; font-size:1.8em; font-weight:700; flex:none; }
+  .ref-hero .gal-sub { line-height:1.25; }
+  .ref-hero > div { max-width:760px; }
+
+  .sec { margin-top:38px; }
+  .sec-h { display:flex; align-items:baseline; gap:12px; margin:0 0 22px; flex-wrap:wrap; }
+  .sec-h .pin { font-family:'Space Mono',monospace; font-weight:700; color:var(--accent); font-size:.9em; }
+  .sec-h h2 { font-size:1.6em; margin:0; line-height:1.2; }
+  .sec-h .desc { font-family:var(--note-font); font-size:1.25em; color:var(--ink-2); line-height:1.2; }
+
+  .lead { font-size:1.05em; line-height:1.5; max-width:78ch; color:var(--ink); }
+  .lead .mono { font-size:.92em; }
+
+  /* À retenir highlight */
+  .retain { display:flex; gap:14px; align-items:flex-start; padding:16px 18px; margin-top:16px; background:var(--mark); border:2px solid var(--mark-edge); border-radius:225px 14px 200px 16px / 16px 200px 14px 225px; }
+  body.clean .retain { border-radius:12px; }
+  .retain .rk { font-family:var(--note-font); font-size:1.5em; color:#6b5800; flex:none; line-height:1; }
+  .retain .rt { color:#5a4a00; line-height:1.45; }
+
+  /* pays table */
+  .paytbl { width:100%; border-collapse:collapse; font-size:.95em; }
+  .paytbl th { text-align:left; color:var(--ink-3); font-weight:400; padding:8px 10px; border-bottom:2px solid var(--line); font-size:.85em; }
+  .paytbl td { padding:8px 10px; border-bottom:1.5px dashed var(--fill-2); }
+  .paytbl tr:last-child td { border-bottom:none; }
+  .paytbl .cap { color:var(--ink-2); }
+  .cur { display:inline-flex; align-items:center; gap:6px; font-family:'Space Mono',monospace; font-size:.85em; }
+  .cur .dt { width:9px; height:9px; border-radius:50%; flex:none; border:1.5px solid var(--line); }
+  .cur.xof .dt { background:#2563eb; } .cur.xaf .dt { background:#c2410c; }
+  .cur.other .dt { background:var(--ink-3); }
+  .paytbl .tva { font-family:'Space Mono',monospace; text-align:right; }
+  .pay-legend { display:flex; gap:16px; flex-wrap:wrap; margin-top:12px; font-size:.9em; }
+
+  /* 9 classes */
+  .classes { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  .cls { display:flex; gap:12px; align-items:flex-start; padding:13px 14px; background:var(--panel); }
+  .cls .n { width:34px; height:34px; flex:none; border:2px solid var(--line); border-radius:9px 14px 8px 13px / 13px 8px 14px 9px; display:grid; place-items:center; font-weight:700; font-size:1.1em; background:var(--accent-soft); }
+  .cls .ct { font-size:1.02em; line-height:1.35; padding-bottom:2px; }
+  .cls .cd { color:var(--ink-3); font-size:.85em; line-height:1.35; margin-top:8px; }
+
+  /* états obligatoires */
+  .etats { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; }
+  .etat { display:flex; flex-direction:column; gap:6px; padding:14px; background:var(--panel); text-decoration:none; color:inherit; }
+  .etat .ei { font-size:1.5em; }
+  .etat .et { font-weight:700; line-height:1.05; }
+  .etat .ed { color:var(--ink-3); font-size:.84em; line-height:1.25; flex:1; }
+
+  /* AUDCIF apports */
+  .apports { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+  .ap { display:flex; gap:11px; padding:12px 14px; background:var(--panel); }
+  .ap .ak { font-family:'Space Mono',monospace; color:var(--accent); font-weight:700; flex:none; }
+  .ap .b { line-height:1.35; }
+  .ap .small { margin-top:6px !important; line-height:1.35; }
+
+  /* cas pratique */
+  .cas { display:grid; grid-template-columns:1.1fr 1fr; gap:18px; align-items:start; }
+  .cas .story { line-height:1.5; }
+  .cas .amt { font-family:'Space Mono',monospace; font-weight:700; }
+
+  /* erreurs */
+  .errs { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+  .err { display:flex; gap:12px; padding:13px 15px; background:var(--panel); border-color:var(--danger) !important; }
+  .err .ex { color:var(--danger); font-size:1.2em; flex:none; line-height:1.1; }
+  .err .eh { font-weight:700; }
+  .err .efix { font-family:var(--note-font); color:var(--accent); font-size:1.15em; margin-top:4px; }
+
+  .footlinks { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+
+  @media (max-width:980px){ .classes{grid-template-columns:repeat(2,1fr)} .etats{grid-template-columns:repeat(2,1fr)} .apports,.errs{grid-template-columns:1fr} .cas{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="shared.jsx"></script>
+<script type="text/babel">
+const { useState, useEffect } = React;
+const FONTS = { "Patrick Hand": "'Patrick Hand', cursive", "Kalam": "'Kalam', cursive", "Shantell Sans": "'Shantell Sans', cursive" };
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accent": "#0f766e",
+  "sketch": true,
+  "font": "Kalam",
+  "density": "Confort",
+  "annotations": true
+}/*EDITMODE-END*/;
+
+// pays : [pays, capitale, devise code, zone ('xof'|'xaf'|'other'), libellé devise, tva]
+const PAYS = [
+  ["Bénin","Cotonou","XOF","xof","FCFA BCEAO","18 %"],
+  ["Burkina Faso","Ouagadougou","XOF","xof","FCFA BCEAO","18 %"],
+  ["Cameroun","Yaoundé","XAF","xaf","FCFA BEAC","19,25 %"],
+  ["Centrafrique","Bangui","XAF","xaf","FCFA BEAC","19 %"],
+  ["Comores","Moroni","KMF","other","Franc comorien","10 %"],
+  ["Congo","Brazzaville","XAF","xaf","FCFA BEAC","18,9 %"],
+  ["Côte d'Ivoire","Abidjan","XOF","xof","FCFA BCEAO","18 %"],
+  ["Gabon","Libreville","XAF","xaf","FCFA BEAC","18 %"],
+  ["Guinée","Conakry","GNF","other","Franc guinéen","18 %"],
+  ["Guinée-Bissau","Bissau","XOF","xof","FCFA BCEAO","10 %"],
+  ["Guinée Équatoriale","Malabo","XAF","xaf","FCFA BEAC","15 %"],
+  ["Mali","Bamako","XOF","xof","FCFA BCEAO","18 %"],
+  ["Niger","Niamey","XOF","xof","FCFA BCEAO","19 %"],
+  ["RDC","Kinshasa","CDF","other","Franc congolais","16 %"],
+  ["Sénégal","Dakar","XOF","xof","FCFA BCEAO","18 %"],
+  ["Tchad","N'Djamena","XAF","xaf","FCFA BEAC","18 %"],
+  ["Togo","Lomé","XOF","xof","FCFA BCEAO","18 %"],
+];
+
+const CLASSES = [
+  ["1","Ressources durables","Capitaux propres, emprunts, provisions"],
+  ["2","Actif immobilisé","Incorporelles, corporelles, financières"],
+  ["3","Stocks","Marchandises, matières, en-cours"],
+  ["4","Tiers","Clients, fournisseurs, État, personnel"],
+  ["5","Trésorerie","Banques, caisses, Mobile Money"],
+  ["6","Charges","Achats, services, personnel, impôts"],
+  ["7","Produits","Ventes, autres revenus"],
+  ["8","Autres charges & produits HAO","Hors activité ordinaire"],
+  ["9","Analytique & engagements","Comptabilité de gestion, hors-bilan"],
+];
+
+const ETATS = [
+  ["▥","Bilan","Situation patrimoniale à la clôture","DaCompta - Module Etats et documents.html"],
+  ["▤","Compte de résultat","Performance de l'exercice","DaCompta - Module Etats et documents.html"],
+  ["≈","TAFIRE","Tableau des ressources & emplois (flux)","DaCompta - Module Etats et documents.html"],
+  ["✎","Notes annexes","Détail des comptes & règles N / N-1","DaCompta - Module Etats et documents.html"],
+  ["%","États DSF","Ventilation détaillée pour le fisc","DaCompta - Module Etats et documents.html"],
+];
+
+const APPORTS = [
+  ["⬡","Approche par composants","Immobilisations corporelles ventilées (alignée IAS 16)."],
+  ["↘","Dépréciation des actifs","Test de dépréciation & valeur recouvrable, logique IFRS."],
+  ["⇄","Contrats de location","Distinction location simple / location-financement."],
+  ["◷","Instruments financiers","Classification & évaluation à la juste valeur."],
+  ["✎","Information enrichie","Notes annexes plus détaillées dans la liasse."],
+  ["○","Système minimal de trésorerie","Assoupli pour les très petites entreprises."],
+];
+
+const ERREURS = [
+  ["Confusion comptes 6 et 8","Les charges HAO (hors activité ordinaire) sont distinctes des charges courantes.","DaCompta sépare les natures dès l'imputation"],
+  ["TVA non distinguée par taux","Vendre du taxé 18 % et de l'exonéré exige de ventiler le compte 4431.","Ventilation 4431 par taux, automatique"],
+  ["Stock non valorisé en CMUP / FIFO","Les estimations empiriques faussent la marge et rendent le bilan non auditable.","Sortie de stock valorisée au CMUP"],
+  ["Immobilisations non amorties par composants","Depuis l'AUDCIF, un véhicule se ventile (carrosserie, moteur, pneus) à durées distinctes.","Plan d'amortissement par composant"],
+  ["Mobile Money en caisse unique","Chaque opérateur (Orange Money, Wave…) doit avoir son sous-compte 5xx.","Un sous-compte 5xx par opérateur"],
+];
+
+// écritures du cas pratique : [compte, libellé, débit, crédit]
+const CAS_ECR = [
+  ["5211","Banque Wave","100 000",""],
+  ["5711","Caisse espèces","150 000",""],
+  ["7011","Ventes de marchandises","","211 864"],
+  ["4431","TVA collectée (18 %)","","38 136"],
+];
+
+function Sec({ pin, titre, desc, children }) {
+  return (
+    <section className="sec">
+      <div className="sec-h">
+        <span className="pin">{pin}</span>
+        <h2>{titre}</h2>
+        {desc && <span className="annotation desc">· {desc}</span>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function RefApp() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  useEffect(() => {
+    document.documentElement.style.setProperty("--accent", t.accent);
+    document.documentElement.style.setProperty("--ui-font", FONTS[t.font] || FONTS["Patrick Hand"]);
+    document.body.classList.toggle("clean", !t.sketch);
+    document.body.classList.toggle("density-compact", t.density === "Compact");
+    document.body.classList.toggle("no-annot", !t.annotations);
+  }, [t]);
+
+  return (
+    <React.Fragment>
+      <div className="ref">
+        <header className="ref-hero">
+          <div className="ref-logo">Dₐ</div>
+          <div>
+            <h1 className="gal-title" style={{ margin: 0 }}>Référentiel SYSCOHADA</h1>
+            <div className="gal-sub">Le socle commun à tous les flux — pourquoi le plan, les états et la TVA sont ce qu'ils sont</div>
+          </div>
+        </header>
+        <div className="annotation annot" style={{ marginTop: 18, maxWidth: 820 }}>
+          Cette page n'est pas un écran produit : c'est la fiche de référence que toute la doc des workflows présuppose. À garder ouverte à côté des flux.
+        </div>
+
+        {/* 1 — Qu'est-ce que SYSCOHADA */}
+        <Sec pin="01" titre="Qu'est-ce que SYSCOHADA ?" desc="le standard, pas une option">
+          <p className="lead">
+            Le <Mark>Système Comptable de l'OHADA</Mark> est le référentiel comptable <b>obligatoire</b> des 17 États membres de l'Organisation pour l'Harmonisation en Afrique du Droit des Affaires. Il fixe le plan de comptes, les règles d'évaluation, la présentation des états financiers et le contenu de la DSF.
+          </p>
+          <p className="lead" style={{ marginTop: 10 }}>
+            La version en vigueur résulte de la révision <span className="mono">2017</span>, encadrée par l'<b>AUDCIF</b> (Acte Uniforme relatif au Droit Comptable et à l'Information Financière). Elle rapproche significativement SYSCOHADA des normes <b>IFRS</b> : composants, locations, dépréciation, instruments financiers.
+          </p>
+          <div className="retain">
+            <span className="rk">★ À retenir</span>
+            <span className="rt">
+              Standard obligatoire dans <b>17 pays</b>. La version AUDCIF&nbsp;2017 est compatible avec un référentiel <b>IFRS dans ~80 % des cas</b> — ce qui facilite la consolidation des groupes internationaux opérant en Afrique. <b>DaCompta charge le bon paramétrage selon le pays du dossier.</b>
+            </span>
+          </div>
+        </Sec>
+
+        {/* 2 — Les 17 pays */}
+        <Sec pin="02" titre="Les 17 pays OHADA" desc="deux zones FCFA — deux devises distinctes">
+          <Card style={{ padding: "6px 16px" }}>
+            <table className="paytbl">
+              <thead>
+                <tr><th>Pays</th><th>Capitale</th><th>Devise</th><th style={{ textAlign: "right" }}>TVA standard</th></tr>
+              </thead>
+              <tbody>
+                {PAYS.map((p, i) => (
+                  <tr key={i}>
+                    <td className="b">{p[0]}</td>
+                    <td className="cap">{p[1]}</td>
+                    <td><span className={"cur " + p[3]}><span className="dt" />{p[2]} · {p[4]}</span></td>
+                    <td className="tva">{p[5]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+          <div className="pay-legend">
+            <span className="cur xof"><span className="dt" /> XOF — FCFA BCEAO (UEMOA)</span>
+            <span className="cur xaf"><span className="dt" /> XAF — FCFA BEAC (CEMAC)</span>
+            <span className="cur other"><span className="dt" /> Devise nationale</span>
+          </div>
+          <Annot style={{ marginTop: 10 }}>
+            XOF et XAF sont <b>deux devises séparées</b> (même historiquement à parité euro) — DaCompta les gère comme telles, jamais fusionnées.
+          </Annot>
+        </Sec>
+
+        {/* 3 — Plan comptable 9 classes */}
+        <Sec pin="03" titre="Le plan comptable — 9 classes" desc="la colonne vertébrale du flux « Plan comptable »">
+          <div className="classes">
+            {CLASSES.map((c, i) => (
+              <div key={i} className="cls sk">
+                <span className="n">{c[0]}</span>
+                <div>
+                  <div className="ct b">{c[1]}</div>
+                  <div className="cd">{c[2]}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="footlinks">
+            <a className="btn sm" href="DaCompta - Flux Plan comptable.html">→ Flux Plan comptable</a>
+            <a className="btn sm" href="DaCompta - Flux Structure comptable.html">→ Flux Structure comptable</a>
+          </div>
+        </Sec>
+
+        {/* 4 — États financiers obligatoires */}
+        <Sec pin="04" titre="Les états financiers obligatoires" desc="produits chaque année, générés depuis les écritures">
+          <div className="etats">
+            {ETATS.map((e, i) => (
+              <a key={i} className="etat sk" href={e[3]}>
+                <span className="ei">{e[0]}</span>
+                <span className="et">{e[1]}</span>
+                <span className="ed">{e[2]}</span>
+              </a>
+            ))}
+          </div>
+          <Annot style={{ marginTop: 10 }}>
+            Système simplifié ou minimal de trésorerie : alternatives admises selon la taille du dossier — DaCompta s'adapte au tenant.
+          </Annot>
+        </Sec>
+
+        {/* 5 — AUDCIF 2017 */}
+        <Sec pin="05" titre="Les apports de l'AUDCIF 2017" desc="ce qui a changé, et pourquoi ça touche le produit">
+          <div className="apports">
+            {APPORTS.map((a, i) => (
+              <div key={i} className="ap sk">
+                <span className="ak">{a[0]}</span>
+                <div>
+                  <div className="b">{a[1]}</div>
+                  <div className="muted small" style={{ marginTop: 2 }}>{a[2]}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Sec>
+
+        {/* 6 — Cas pratique */}
+        <Sec pin="06" titre="Cas pratique — une boutique à Abidjan" desc="de l'encaissement à l'écriture, automatiquement">
+          <div className="cas">
+            <Card title="L'opération" className="sk">
+              <p className="story">
+                Une boutique au Plateau encaisse <span className="amt">250 000 FCFA</span> : <span className="amt">100 000</span> par Wave et <span className="amt">150 000</span> en espèces.
+              </p>
+              <p className="story" style={{ marginTop: 8 }}>
+                DaCompta enregistre l'écriture équilibrée, ventile la <b>TVA collectée à 18 %</b> et passe la <b>sortie de stock au CMUP</b> — le bilan SYSCOHADA est à jour en temps réel.
+              </p>
+              <div className="footlinks">
+                <a className="btn sm" href="DaCompta - Flux Journal de Caisse.html">→ Journal de Caisse</a>
+                <a className="btn sm" href="DaCompta - Flux Journal de Banque.html">→ Journal de Banque</a>
+              </div>
+            </Card>
+            <Card title="L'écriture générée" right={<Chip kind="ai">✦ auto</Chip>} className="sk">
+              <table className="tbl">
+                <thead><tr><th>Compte</th><th>Libellé</th><th className="num">Débit</th><th className="num">Crédit</th></tr></thead>
+                <tbody>
+                  {CAS_ECR.map((r, i) => (
+                    <tr key={i}>
+                      <td className="mono small">{r[0]}</td>
+                      <td className="small">{r[1]}</td>
+                      <td className="num mono small">{r[2]}</td>
+                      <td className="num mono small">{r[3]}</td>
+                    </tr>
+                  ))}
+                  <tr>
+                    <td></td><td className="b small">Total</td>
+                    <td className="num mono small b">250 000</td>
+                    <td className="num mono small b">250 000</td>
+                  </tr>
+                </tbody>
+              </table>
+              <Annot style={{ marginTop: 8 }}>Équilibre vivant : débit = crédit, contrôlé à la saisie.</Annot>
+            </Card>
+          </div>
+        </Sec>
+
+        {/* 7 — Erreurs fréquentes */}
+        <Sec pin="07" titre="Les erreurs SYSCOHADA les plus fréquentes" desc="ce que le produit doit empêcher par construction">
+          <div className="errs">
+            {ERREURS.map((e, i) => (
+              <div key={i} className="err sk">
+                <span className="ex">✕</span>
+                <div>
+                  <div className="eh">{e[0]}</div>
+                  <div className="muted small" style={{ marginTop: 2 }}>{e[1]}</div>
+                  <div className="efix">✓ {e[2]}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Sec>
+
+        <div className="note" style={{ textAlign: "center", marginTop: 30 }}>
+          Une règle vous semble inexacte ou datée ? Dites-le — cette fiche est la source de vérité des flux & tutoriels.
+        </div>
+        <div className="footlinks" style={{ justifyContent: "center" }}>
+          <a className="btn" href="DaCompta - Accueil.html">← Retour à l'accueil</a>
+          <a className="btn" href="DaCompta - Architecture des modules.html">Architecture des modules →</a>
+        </div>
+      </div>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Style" />
+        <TweakToggle label="Trait esquissé" value={t.sketch} onChange={(v) => setTweak("sketch", v)} />
+        <TweakSelect label="Police" value={t.font} options={Object.keys(FONTS)} onChange={(v) => setTweak("font", v)} />
+        <TweakColor label="Couleur d'accent" value={t.accent}
+          options={["#0f766e", "#1f8a5b", "#c2410c", "#2563eb", "#7c3aed"]}
+          onChange={(v) => setTweak("accent", v)} />
+        <TweakSection label="Mise en page" />
+        <TweakRadio label="Densité" value={t.density} options={["Confort", "Compact"]} onChange={(v) => setTweak("density", v)} />
+        <TweakToggle label="Annotations manuscrites" value={t.annotations} onChange={(v) => setTweak("annotations", v)} />
+      </TweaksPanel>
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<RefApp />);
+</script>
+</body>
+</html>

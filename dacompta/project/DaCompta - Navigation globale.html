@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DaCompta — Navigation globale</title>
+<link rel="stylesheet" href="styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  .legend { max-width: 1180px; margin: 0 auto 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .legend .lg { display: inline-flex; align-items: center; gap: 6px; font-size: .9em; }
+  .legend .dot { width: 12px; height: 12px; border-radius: 3px; border: 1.5px solid var(--line); }
+  body.no-annot .nav-piste { display: none; }
+  .nav-piste { font-family: var(--note-font); font-size: .92em; color: var(--accent); margin-left: 6px; }
+  .topcmd { flex: 1; min-width: 220px; max-width: 560px; display: flex; align-items: center; gap: 8px; padding: 8px 14px; border: 2px solid var(--line); border-radius: 200px; background: var(--paper); color: var(--ink-3); white-space: nowrap; overflow: hidden; }
+  .topcmd > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .topbar { flex-wrap: wrap; }
+  body.clean .topcmd { border-radius: 10px; }
+  .modeseg { display: inline-flex; border: 2px solid var(--line); border-radius: 200px; overflow: hidden; background: var(--panel); }
+  .modeseg button { font-family: var(--ui-font); font-size: .85em; border: none; background: transparent; color: var(--ink-2); padding: 5px 12px; cursor: pointer; }
+  .modeseg button.on { background: var(--accent); color: #fff; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="shared.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+const FONTS = { "Patrick Hand": "'Patrick Hand', cursive", "Kalam": "'Kalam', cursive", "Shantell Sans": "'Shantell Sans', cursive" };
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accent": "#0f766e",
+  "sketch": true,
+  "font": "Kalam",
+  "density": "Compact",
+  "annotations": true
+}/*EDITMODE-END*/;
+
+const NAV = [
+  { sect: "Pilotage" },
+  { ico: "◎", label: "Tableau de bord", active: true },
+  { ico: "⚠", label: "À vérifier", badge: "4" },
+  { sect: "Saisie" },
+  { ico: "✎", label: "Écritures" },
+  { ico: "▤", label: "Journaux" },
+  { ico: "⇄", label: "Banques & Mobile Money" },
+  { sect: "Structure" },
+  { ico: "▦", label: "Plan comptable" },
+  { ico: "👥", label: "Tiers" },
+  { ico: "◷", label: "Analytique" },
+  { ico: "▥", label: "Budget" },
+  { sect: "États" },
+  { ico: "▤", label: "Bilan & Résultat" },
+  { ico: "⎙", label: "DSF & déclarations" },
+];
+
+function NavShell() {
+  const [cabinet, setCabinet] = useState(true);
+  const [copilote, setCopilote] = useState(true);
+
+  return (
+    <div className="appframe" style={{ maxWidth: 1180, margin: "0 auto" }}>
+      <div className="win-bar">
+        <div className="dots"><i /><i /><i /></div>
+        <span className="small muted">DaCompta — espace de travail</span>
+        <div className="grow" style={{ flex: 1 }} />
+        <span className="modeseg"><button className={cabinet ? "on" : ""} onClick={() => setCabinet(true)}>Cabinet</button><button className={!cabinet ? "on" : ""} onClick={() => setCabinet(false)}>Entreprise</button></span>
+      </div>
+
+      <div className={"app" + (copilote ? " threecol" : "")} style={{ "--side-w": "230px", "--rail-w": "290px", "--app-h": "600px" }}>
+        {/* SIDEBAR — Piste A */}
+        <aside className="side">
+          <div className="brand"><div className="logo">Dₐ</div><div className="name">DaCompta</div></div>
+          <DossierSwitcher name={cabinet ? "Cabinet Diallo & Co" : "Les Associés SA"} sub={cabinet ? "14 dossiers · changer ▾" : "Exercice 2020 · XOF"} />
+          <span className="nav-piste">⬅ modules + commutateur (Piste A)</span>
+          {NAV.map((it, i) => it.sect
+            ? <div key={i} className="nav-sect">{it.sect}</div>
+            : <div key={i} className={"nav-item" + (it.active ? " active" : "")}><span className="ico">{it.ico}</span><span style={{ flex: 1 }}>{it.label}</span>{it.badge && <span className="chip warn" style={{ fontSize: ".68em", padding: "0 7px" }}>{it.badge}</span>}</div>
+          )}
+          <div style={{ flex: 1 }} />
+          <div className="nav-item"><span className="ico">✦</span><span style={{ flex: 1 }}>Assistant</span></div>
+          <div className="nav-item"><span className="ico">⚙</span><span style={{ flex: 1 }}>Paramètres</span></div>
+        </aside>
+
+        {/* CENTRE */}
+        <div className="main">
+          <div className="topbar">
+            <div className="topcmd">⌘K <span>Chercher, saisir une pièce, ou demander à l'IA…</span></div>
+            <span className="nav-piste">barre ⌘K (Piste B)</span>
+            <div className="grow" style={{ flex: 1 }} />
+            <span className="pill-sync"><span className="dot" /> Hors-ligne prêt</span>
+            <span className="chip fill" style={{ fontSize: ".78em" }}>FR ⇄ EN</span>
+            <span className="modeseg"><button className={copilote ? "on" : ""} onClick={() => setCopilote(true)}>Copilote</button><button className={!copilote ? "on" : ""} onClick={() => setCopilote(false)}>Masquer</button></span>
+            <span className="avatar">FD</span>
+          </div>
+
+          {cabinet && (
+            <Card title="Portefeuille — dossiers prioritaires" right={<Chip kind="warn">7 échéances</Chip>}>
+              <table className="tbl">
+                <tbody>
+                  {[["Les Associés SA", "DSF 15 mai", "warn"], ["Ivoire Négoce", "à jour", "ok"], ["BTP Sahel", "12 à valider", "warn"]].map((r, i) => (
+                    <tr key={i}><td className="b">{r[0]}</td><td>{r[2] === "warn" ? <Chip kind="warn">{r[1]}</Chip> : <Chip kind="fill">{r[1]}</Chip>}</td><td className="right"><Btn sm>Ouvrir →</Btn></td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          )}
+
+          <div className="grid" style={{ gridTemplateColumns: "repeat(3,1fr)" }}>
+            <Kpi v="9,7 M" k="Résultat à date" />
+            <Kpi v="18,4 M" k="Trésorerie" />
+            <Kpi v="4" k="À vérifier" trend={<Chip kind="ai">✦ IA</Chip>} />
+          </div>
+          <Card title="Trésorerie (90 j)"><Bars data={[40, 52, 48, 61, 70, 58, 82]} /></Card>
+        </div>
+
+        {/* RAIL COPILOTE — Piste C */}
+        {copilote && (
+          <aside className="rail">
+            <div className="rail-h"><span className="chip ai">✦ Copilote</span><span className="nav-piste">rail repliable (Piste C)</span></div>
+            <div className="bubble ai small">4 pièces à imputer et 1 anomalie TVA. Je prépare des propositions — tu valides.</div>
+            <div className="card" style={{ padding: 11 }}>
+              <div className="small muted">Proposition</div>
+              <div className="b">FRN-208 → 626 / 445</div>
+              <div className="flex g8 mt8"><Btn kind="primary" sm>Valider</Btn><Btn sm>Voir</Btn></div>
+            </div>
+            <div style={{ flex: 1 }} />
+            <div className="searchbar" style={{ background: "var(--panel)" }}>✎ <span>Poser une question…</span></div>
+          </aside>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function NavApp() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  useEffect(() => {
+    document.documentElement.style.setProperty("--accent", t.accent);
+    document.documentElement.style.setProperty("--ui-font", FONTS[t.font] || FONTS["Patrick Hand"]);
+    document.body.classList.toggle("clean", !t.sketch);
+    document.body.classList.toggle("density-compact", t.density === "Compact");
+    document.body.classList.toggle("no-annot", !t.annotations);
+  }, [t]);
+
+  return (
+    <React.Fragment>
+      <header className="gal-head">
+        <h1 className="gal-title">Navigation globale</h1>
+        <div className="gal-sub">La coque définitive — synthèse des 3 pistes d'architecture</div>
+      </header>
+      <div className="legend annotation">
+        <span className="lg"><span className="dot" style={{ background: "var(--accent-soft)" }} />Piste A — sidebar modules + commutateur de dossier</span>
+        <span className="lg"><span className="dot" style={{ background: "var(--paper)" }} />Piste B — barre de commande ⌘K</span>
+        <span className="lg"><span className="dot" style={{ background: "var(--accent-soft)" }} />Piste C — rail copilote IA repliable</span>
+      </div>
+      <main style={{ padding: "0 28px 110px" }}>
+        <NavShell />
+        <div style={{ textAlign: "center", marginTop: 14, maxWidth: 1180, margin: "14px auto 0" }} className="annotation">
+          <span className="note">Bascule Cabinet / Entreprise (en-tête) et Copilote / Masquer — la coque s'adapte au contexte</span>
+        </div>
+      </main>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Style" />
+        <TweakToggle label="Trait esquissé" value={t.sketch} onChange={(v) => setTweak("sketch", v)} />
+        <TweakSelect label="Police" value={t.font} options={Object.keys(FONTS)} onChange={(v) => setTweak("font", v)} />
+        <TweakColor label="Couleur d'accent" value={t.accent}
+          options={["#0f766e", "#1f8a5b", "#c2410c", "#2563eb", "#7c3aed"]}
+          onChange={(v) => setTweak("accent", v)} />
+        <TweakSection label="Mise en page" />
+        <TweakRadio label="Densité" value={t.density} options={["Confort", "Compact"]} onChange={(v) => setTweak("density", v)} />
+        <TweakToggle label="Annotations (repères de pistes)" value={t.annotations} onChange={(v) => setTweak("annotations", v)} />
+      </TweaksPanel>
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<NavApp />);
+</script>
+</body>
+</html>

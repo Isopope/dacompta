@@ -98,7 +98,23 @@ async function main() {
     });
   }
 
-  console.log(`Seed OK — référentiel ${ref.code}, dossier ${dossier.nom}, ${COMPTES_LES_ASSOCIES.length} comptes, ${JOURNAUX.length} journaux.`);
+  // Soldes N-1 (exercice 2019) pour les comptes de gestion — source du N-1 du
+  // Compte de résultat. Signés débit − crédit : charges (6) > 0, produits (7) < 0.
+  const SOLDES_N1 = [
+    { compteNumero: "706100", montant: -48_000_000 }, // produit : recette transport
+    { compteNumero: "601100", montant: 7_800_000 }, // charge : achats marchandises
+    { compteNumero: "605300", montant: 13_200_000 }, // charge : carburant
+    { compteNumero: "661100", montant: 18_500_000 }, // charge : salaires
+  ];
+  for (const s of SOLDES_N1) {
+    await prisma.soldeAnterieur.upsert({
+      where: { dossierId_compteNumero: { dossierId: dossier.id, compteNumero: s.compteNumero } },
+      update: { montant: s.montant },
+      create: { compteNumero: s.compteNumero, montant: s.montant, dossierId: dossier.id },
+    });
+  }
+
+  console.log(`Seed OK — référentiel ${ref.code}, dossier ${dossier.nom}, ${COMPTES_LES_ASSOCIES.length} comptes, ${JOURNAUX.length} journaux, ${SOLDES_N1.length} soldes N-1.`);
 }
 
 main().finally(() => prisma.$disconnect());

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DaCompta — Le test de l'ERP africain</title>
+<link rel="stylesheet" href="styles.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 6px 28px 120px; }
+  .hero { display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:6px; }
+  .hero .logo { width:58px; height:58px; border:2.5px solid var(--line); border-radius:16px 22px 14px 20px / 20px 14px 22px 16px; display:grid; place-items:center; background:var(--accent); color:#fff; font-size:1.8em; font-weight:700; flex:none; }
+
+  .sec { margin-top:34px; }
+  .sec-h { display:flex; align-items:baseline; gap:12px; margin:0 0 4px; flex-wrap:wrap; }
+  .sec-h .pin { font-family:'Space Mono',monospace; font-weight:700; color:var(--accent); }
+  .sec-h h2 { font-size:1.6em; margin:0; }
+  .sec-sub { font-family:var(--note-font); font-size:1.3em; color:var(--ink-2); margin:0 0 16px; }
+
+  /* 3-min test */
+  .test3 { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .qcard { display:flex; flex-direction:column; gap:10px; padding:18px; background:var(--panel); }
+  .qcard .qn { width:30px;height:30px;border:2px solid var(--line);border-radius:50%;display:grid;place-items:center;font-family:'Space Mono',monospace;font-weight:700; }
+  .qcard .q { font-size:1.08em; line-height:1.25; font-weight:700; }
+  .qcard .clics { display:inline-flex; align-items:center; gap:7px; align-self:flex-start; background:var(--accent); color:#fff; border-radius:200px; padding:4px 13px; font-family:'Space Mono',monospace; font-size:.85em; }
+  .qcard .a { color:var(--ink-2); font-size:.95em; line-height:1.45; flex:1; }
+  .qcard .pl { margin-top:2px; }
+
+  /* checklist */
+  .ck { display:flex; flex-direction:column; gap:10px; }
+  .ckrow { display:flex; gap:14px; align-items:flex-start; padding:14px 16px; background:var(--panel); }
+  .ckrow .ci { width:34px;height:34px;flex:none;border:2px solid var(--line);border-radius:9px 14px 8px 13px / 13px 8px 14px 9px;display:grid;place-items:center;font-size:1.05em;background:var(--paper); }
+  .ckrow .cb { flex:1; }
+  .ckrow .ct { font-weight:700; line-height:1.2; }
+  .ckrow .cd { color:var(--ink-3); font-size:.9em; line-height:1.4; margin-top:3px; }
+  .ckrow .cda { color:var(--ink-2); font-size:.92em; line-height:1.4; margin-top:6px; }
+  .ckrow .cda b { color:var(--ink); }
+  .cklinks { display:flex; gap:8px; flex-wrap:wrap; margin-top:9px; }
+
+  .vd { display:inline-flex; align-items:center; gap:6px; border:1.5px solid var(--line); border-radius:200px; padding:2px 11px; font-size:.8em; white-space:nowrap; flex:none; }
+  .vd.ok { background:var(--accent-soft); border-color:var(--accent); color:var(--accent); }
+  .vd.partial { background:var(--mark); border-color:var(--mark-edge); color:#6b5800; }
+  .vd.out { background:var(--fill); border-color:var(--ink-3); color:var(--ink-3); }
+  .vd.eng { background:color-mix(in srgb,#2563eb 12%,white); border-color:#2563eb; color:#1d4ed8; }
+
+  .grouplab { font-family:'Space Mono',monospace; font-size:.78em; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3); margin:20px 0 8px; display:flex; align-items:center; gap:10px; }
+  .grouplab::after { content:""; flex:1; height:0; border-top:1.5px dashed var(--fill-2); }
+
+  .verdict-box { display:flex; gap:14px; align-items:flex-start; padding:16px 18px; margin-top:22px; background:var(--mark); border:2px solid var(--mark-edge); border-radius:225px 14px 200px 16px / 16px 200px 14px 225px; }
+  body.clean .verdict-box { border-radius:12px; }
+  .verdict-box .vk { font-family:var(--note-font); font-size:1.5em; color:#6b5800; flex:none; line-height:1; }
+  .verdict-box .vt { color:#5a4a00; line-height:1.5; }
+
+  .footlinks { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:30px; }
+
+  @media (max-width:880px){ .test3{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="shared.jsx"></script>
+<script type="text/babel">
+const { useEffect } = React;
+const FONTS = { "Patrick Hand": "'Patrick Hand', cursive", "Kalam": "'Kalam', cursive", "Shantell Sans": "'Shantell Sans', cursive" };
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{ "accent":"#0f766e","sketch":true,"font":"Kalam","density":"Confort","annotations":true }/*EDITMODE-END*/;
+
+// test des 3 minutes
+const TEST3 = [
+  {
+    q: "Encaisser un paiement Wave, combien de clics ?",
+    clics: "1 clic",
+    a: "L'opération « Vente comptant » génère l'écriture complète — Wave (5211), TVA collectée (4431) et sortie de stock au CMUP — en une validation. DaCompta enregistre ce que le terminal encaisse.",
+    link: ["Écritures automatiques", "DaCompta - Flux Écritures automatiques.html"],
+  },
+  {
+    q: "Sortir le bilan SYSCOHADA, combien de clics ?",
+    clics: "1 clic",
+    a: "Le bilan, le compte de résultat et le TAFIRE se génèrent depuis le grand livre, au format officiel, sans retraitement de fin d'année. Actif = Passif contrôlé à la génération.",
+    link: ["États en un clic", "DaCompta - Flux États en un clic.html"],
+  },
+  {
+    q: "Support en français, le samedi ?",
+    clics: "humain · FR",
+    a: "Équipe basée en zone OHADA, joignable aux heures africaines, en français. Le support n'est pas une hotline lointaine : c'est un interlocuteur qui connaît SYSCOHADA et la DSF.",
+    link: null,
+  },
+];
+
+// verdicts : ok | partial | out | eng
+const VD = { ok: "✓ Couvert", partial: "◐ Partiel", out: "⊘ Hors périmètre", eng: "✦ Engagement" };
+
+// checklist groupée
+const PRODUIT = [
+  { ico: "▦", t: "Comptabilité SYSCOHADA native", d: "plan officiel, journaux, bilan, compte de résultat, TAFIRE, états DSF", vd: "ok",
+    a: "Cœur du produit. Plan SYSCOHADA / SYCEBNL préchargé, états officiels générés depuis les écritures.",
+    links: [["Référentiel SYSCOHADA", "DaCompta - Référentiel SYSCOHADA.html"], ["États en un clic", "DaCompta - Flux États en un clic.html"]] },
+  { ico: "📱", t: "Mobile Money", d: "Orange Money, Wave, MTN MoMo, Moov — dans POS, factures, e-commerce", vd: "partial",
+    a: "DaCompta enregistre le Mobile Money proprement : un sous-compte 5xx par opérateur, écriture automatique. Le POS / e-commerce qui encaisse est en périphérie (partenaires).",
+    links: [["Écritures automatiques", "DaCompta - Flux Écritures automatiques.html"], ["Configuration par pays", "DaCompta - Flux Configuration par pays.html"]] },
+  { ico: "⇄", t: "Multi-devises", d: "FCFA BCEAO / BEAC, euro, dollar, naira, cedi — conversion automatique", vd: "partial",
+    a: "Conversion gérée pour la consolidation (XOF/XAF traités comme deux devises distinctes) et l'import/export. Devise de présentation au choix.",
+    links: [["Consolidation multi-entités", "DaCompta - Flux Consolidation multi-entités.html"]] },
+  { ico: "⤬", t: "Multi-entités & consolidation", d: "groupes opérant dans plusieurs pays OHADA", vd: "ok",
+    a: "Périmètre multi-pays, éliminations intra-groupe, part du groupe / minoritaires, traçable jusqu'à la filiale.",
+    links: [["Consolidation multi-entités", "DaCompta - Flux Consolidation multi-entités.html"]] },
+  { ico: "%", t: "Conformité fiscale par pays", d: "TVA, IBS, ITS, retenues à la source, déclarations générées", vd: "ok",
+    a: "Taux et calendrier du pays appliqués ; IBS, retenues et TVA multi-taux produits et pré-remplis pour l'administration.",
+    links: [["Liasse fiscale & retenues", "DaCompta - Flux Liasse fiscale & retenues.html"], ["TVA multi-taux", "DaCompta - Flux TVA multi-taux.html"]] },
+  { ico: "⛅", t: "Mode hors-ligne & synchronisation", d: "saisie sans connexion, sync au retour du réseau", vd: "partial",
+    a: "La compta DaCompta est cloud + hors-ligne avec sync — pas de fichier local à transmettre. Un POS hors-ligne dédié reste hors périmètre.",
+    links: [] },
+  { ico: "▤", t: "POS, e-commerce, app mobile terrain", d: "caisse, boutique en ligne, app dirigeant / commerciaux / techniciens", vd: "out",
+    a: "DaCompta est comptabilité-first. Ces briques ERP s'y connectent (import des opérations), mais ne font pas partie du produit.",
+    links: [] },
+];
+const SERVICE = [
+  { ico: "₣", t: "Tarification en FCFA, transparente", d: "paiement Mobile Money, carte ou virement local", vd: "eng",
+    a: "Prix affiché en FCFA, payable en Mobile Money — réponse directe au pain point n°1 du marché : le prix opaque.",
+    links: [] },
+  { ico: "☏", t: "Support local en français", d: "équipe joignable aux heures africaines (FR, idéalement PT/EN)", vd: "eng",
+    a: "Interlocuteur qui maîtrise SYSCOHADA et la DSF, dans le bon fuseau, dans la bonne langue.",
+    links: [] },
+  { ico: "✎", t: "Formation incluse au déploiement", d: "présentiel ou distance, ressources en français", vd: "eng",
+    a: "Onboarding accompagné + ressources FR — la doc des workflows DaCompta sert de support de formation.",
+    links: [["Accueil — parcours", "DaCompta - Accueil.html"]] },
+];
+
+function Q({ d, i }) {
+  return (
+    <div className="card sk qcard">
+      <span className="qn">{i + 1}</span>
+      <div className="q">{d.q}</div>
+      <span className="clics">⏱ {d.clics}</span>
+      <div className="a">{d.a}</div>
+      {d.link && <a className="btn sm primary pl" href={d.link[1]}>{d.link[0]} ↗</a>}
+    </div>
+  );
+}
+
+function CkRow({ r }) {
+  return (
+    <div className="card sk ckrow">
+      <span className="ci">{r.ico}</span>
+      <div className="cb">
+        <div className="ct">{r.t}</div>
+        <div className="cd">{r.d}</div>
+        <div className="cda"><b>DaCompta —</b> {r.a}</div>
+        {r.links.length > 0 && (
+          <div className="cklinks">
+            {r.links.map((l, i) => <a key={i} className="btn sm" href={l[1]}>{l[0]}</a>)}
+          </div>
+        )}
+      </div>
+      <span className={"vd " + r.vd}>{VD[r.vd]}</span>
+    </div>
+  );
+}
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  useEffect(() => {
+    document.documentElement.style.setProperty("--accent", t.accent);
+    document.documentElement.style.setProperty("--ui-font", FONTS[t.font] || FONTS["Patrick Hand"]);
+    document.body.classList.toggle("clean", !t.sketch);
+    document.body.classList.toggle("density-compact", t.density === "Compact");
+    document.body.classList.toggle("no-annot", !t.annotations);
+  }, [t]);
+
+  return (
+    <React.Fragment>
+      <div className="wrap">
+        <header className="hero">
+          <div className="logo">Dₐ</div>
+          <div>
+            <h1 className="gal-title" style={{ margin: 0 }}>Le test de l'ERP africain</h1>
+            <div className="gal-sub">Le test des 3 minutes + la checklist — où DaCompta tient, et où il s'arrête volontairement</div>
+          </div>
+        </header>
+        <div className="annotation annot" style={{ marginTop: 8, maxWidth: 860 }}>
+          DaCompta est un produit <b>comptabilité-first</b>, pas un ERP tout-en-un. On confronte la grille du marché honnêtement : ce qui est couvert par un workflow, ce qui est en périphérie, ce qui est un engagement de service.
+        </div>
+
+        {/* Test des 3 minutes */}
+        <section className="sec">
+          <div className="sec-h"><span className="pin">01</span><h2>Le test des 3 minutes</h2></div>
+          <p className="annotation sec-sub">· trois questions à poser à n'importe quel éditeur — réponses immédiates et concrètes, ou ce n'en est pas un</p>
+          <div className="test3">
+            {TEST3.map((d, i) => <Q key={i} d={d} i={i} />)}
+          </div>
+        </section>
+
+        {/* Checklist */}
+        <section className="sec">
+          <div className="sec-h"><span className="pin">02</span><h2>La checklist de l'ERP africain</h2></div>
+          <p className="annotation sec-sub">· chaque critère du marché, tranché pour un produit comptable — sans gonfler le périmètre</p>
+
+          <div className="grouplab">Produit · workflows DaCompta</div>
+          <div className="ck">{PRODUIT.map((r, i) => <CkRow key={i} r={r} />)}</div>
+
+          <div className="grouplab">Service & commercial · engagements</div>
+          <div className="ck">{SERVICE.map((r, i) => <CkRow key={i} r={r} />)}</div>
+        </section>
+
+        <div className="verdict-box">
+          <span className="vk">★ Le verdict</span>
+          <span className="vt">
+            Sur le <b>comptable et le fiscal</b> — le cœur du test — DaCompta répond en 1 clic et par pays. Sur le <b>POS, l'e-commerce et le mobile terrain</b>, il ne prétend pas remplacer un ERP : il s'y <b>connecte</b> et enregistre proprement. C'est un choix de périmètre, pas un trou.
+          </span>
+        </div>
+
+        <div className="note" style={{ textAlign: "center", marginTop: 28 }}>
+          Un critère à reclasser, ou un « hors périmètre » à faire entrer dans la roadmap ? Dites-le.
+        </div>
+        <div className="footlinks">
+          <a className="btn" href="DaCompta - Accueil.html">← Retour à l'accueil</a>
+          <a className="btn" href="DaCompta - Fonctionnalités à intégrer.html">Fonctionnalités à intégrer →</a>
+          <a className="btn" href="DaCompta - Référentiel SYSCOHADA.html">Référentiel SYSCOHADA →</a>
+        </div>
+      </div>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Style" />
+        <TweakToggle label="Trait esquissé" value={t.sketch} onChange={(v) => setTweak("sketch", v)} />
+        <TweakSelect label="Police" value={t.font} options={Object.keys(FONTS)} onChange={(v) => setTweak("font", v)} />
+        <TweakColor label="Couleur d'accent" value={t.accent}
+          options={["#0f766e", "#1f8a5b", "#c2410c", "#2563eb", "#7c3aed"]}
+          onChange={(v) => setTweak("accent", v)} />
+        <TweakSection label="Mise en page" />
+        <TweakRadio label="Densité" value={t.density} options={["Confort", "Compact"]} onChange={(v) => setTweak("density", v)} />
+        <TweakToggle label="Annotations manuscrites" value={t.annotations} onChange={(v) => setTweak("annotations", v)} />
+      </TweaksPanel>
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+Tu travailles sur DaCompta — C:\Polytech DI\Semestre 10\dacompte
+
+**Contexte projet complet dans CLAUDE.md à la racine du projet. Lis-le pour tout comprendre.**
+
+## Objectif
+Créer un **dashboard comptable** à la Odoo sur la page d'accueil (`/` → `src/app/page.tsx`), qui remplace la redirection actuelle vers le plan comptable.
+
+Le dashboard doit montrer :
+1. **KPIs globaux** (carton en haut)
+   - Résultat net (produits classe 7 − charges classe 6)
+   - Total trésorerie (soldes débiteurs des comptes 5xxxxx)
+   - Chiffre d'affaires (total crédits comptes 70xxxx)
+   - Total charges (total débits comptes 6xxxxx)
+   - Nombre de pièces non-annulées
+   - Nombre de brouillons en attente
+
+2. **Cartes par journal** (grille responsive)
+   - Code et libellé du journal
+   - Nombre de pièces (total / brouillons)
+   - Solde total (débit − crédit des lignes)
+   - Dernière date d'écriture
+   - Couleur d'accent par type de journal (ACH → orange, VT → vert, CAI → bleu, BIMA → violet, OD → gris, PE → jaune, RAN → rouge)
+
+3. **Lien direct** vers chaque page depuis les KPIs
+
+## Architecture
+- **Server action** : `src/server/dashboard.ts` — fonction `getDashboardStats(dossierId: string): DashboardStats`
+- **Tests** : `src/server/dashboard.test.ts` — TDD, écrits AVANT l'implémentation
+- **Page** : `src/app/page.tsx` — composant client avec le dashboard
+- Le dossier par défaut s'appelle "Les Associés SA" (seed)
+
+## Design
+- Utilise le design system existant (CSS vars : --accent:#0f766e, --bg, --panel, --line, --muted, etc.)
+- Palette journaux : ACH=#e67e22, VT=#27ae60, CAI=#3498db, BIMA=#8e44ad, OD=#7f8c8d, PE=#f1c40f, RAN=#e74c3c
+- Présentation moderne : KPIs en haut (grille 3x2), cartes journaux en dessous (grille responsive)
+- Chaque KPI doit cliquer vers la page correspondante
+- Chaque carte journal doit cliquer vers /ecritures?journal=CODE_JOURNAL
+
+## Database
+Consulte le schéma Prisma (`prisma/schema.prisma`) et les services existants (`src/server/balance.ts`, `src/lib/etats/etats-financiers.ts`) pour comprendre comment les données sont structurées.
+
+Modèles clés :
+- **Dossier** : contient tout (journaux, pièces, comptes)
+- **Journal** : code (ACH/VT/CAI/BIMA/OD/PE/RAN), libelle
+- **Piece** : journalId, statut (BROUILLON/VALIDEE/ANNULEE), datePiece
+- **LigneEcriture** : pieceId, compteNumero, debit, credit
+- **Compte** : numero (6 chiffres), classNum
+
+## Contraintes
+- TDD d'abord : écris les tests, vérifie qu'ils échouent (RED), puis implémente (GREEN)
+- `src/server/dashboard.ts` doit avoir "use server"
+- Les nombres décimaux (Prisma.Decimal) doivent être convertis en number avant d'être retournés
+- Date( ) doit être convertie en string ISO
+- Tests avec Vitest en utilisant le test setup existant (prisma/test.db, resetDb)
+- Le dashboard doit utiliser le dossier du seed (cherche le premier dossier dans la DB)
+- Noms de fonctions et variables en français
+- Code commenté en français
+- Design system : utilise les classes CSS existantes (`.container`, `.btn`, `.badge`, `.muted`, `.mono`)
+
+## Plan d'action
+1. Crée `src/server/dashboard.test.ts` — tests pour getDashboardStats
+2. Exécute les tests (ils doivent échouer — RED)
+3. Crée `src/server/dashboard.ts` — implémente getDashboardStats
+4. Exécute les tests (ils doivent passer — GREEN)
+5. Modifie `src/app/page.tsx` — remplace la redirection par le composant Dashboard
+
+Ne pose pas de questions. Décide toi-même. Lance la commande complète à chaque fois. Exécute les tests après chaque étape.

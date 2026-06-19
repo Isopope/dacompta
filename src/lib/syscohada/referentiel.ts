@@ -77,4 +77,7 @@ export const COMPTES_LES_ASSOCIES: CompteSeed[] = [
   { numero: "571100", intitule: "Caisse siège", type: "DETAIL" },
   { numero: "601100", intitule: "Achats de marchandises", type: "DETAIL" },
   { numero: "661100", intitule: "Appointements et salaires", type: "DETAIL" },
+  { numero: "421000", intitule: "Personnel, rémunérations dues", type: "DETAIL" },
+  { numero: "605300", intitule: "Achat carburant", type: "DETAIL" },
+  { numero: "706100", intitule: "Recette transport", type: "DETAIL" },
 ];

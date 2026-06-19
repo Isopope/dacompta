@@ -35,9 +35,10 @@ export interface BalanceLigne {
   intitule: string;
   classeNum: number;
   typeCompte: string; // DETAIL | TOTAL
-  ouverture: number; // 0 pour un exercice neuf
-  debit: number; // total des mouvements débit
-  credit: number; // total des mouvements crédit
+  ouverture: number; // solde reporté (RAN), signé débit − crédit ; 0 pour un exercice neuf
+  soldeNMoins1: number; // solde de clôture N-1 = ouverture de N (POC : égal à `ouverture`)
+  debit: number; // total des mouvements débit de l'exercice (hors RAN)
+  credit: number; // total des mouvements crédit de l'exercice (hors RAN)
   soldeDebiteur: number;
   soldeCrediteur: number;
 }
@@ -164,28 +165,64 @@ export async function getGrandLivre(
  * ouverture (0), mouvements débit/crédit, solde débiteur/créditeur,
  * plus les totaux généraux. Triée par classe puis numéro.
  */
-export async function getBalance(dossierId: string): Promise<BalanceResultat> {
-  const [meta, lignes] = await Promise.all([chargerComptes(dossierId), chargerLignes(dossierId)]);
+// Snapshot des soldes N-1 par compte (signés débit − crédit). Source du N-1 du
+// Compte de résultat (les classes 6/7 n'ont pas de RAN).
+async function chargerSoldesNMoins1(dossierId: string): Promise<Map<string, number>> {
+  const soldes = await prisma.soldeAnterieur.findMany({
+    where: { dossierId },
+    select: { compteNumero: true, montant: true },
+  });
+  return new Map(soldes.map((s) => [s.compteNumero, Number(s.montant)]));
+}
 
-  const acc = new Map<string, { debit: Prisma.Decimal; credit: Prisma.Decimal }>();
+export async function getBalance(dossierId: string): Promise<BalanceResultat> {
+  const [meta, lignes, snapshotN1] = await Promise.all([
+    chargerComptes(dossierId),
+    chargerLignes(dossierId),
+    chargerSoldesNMoins1(dossierId),
+  ]);
+
+  // Pour chaque compte : ouverture (lignes du journal RAN, signée débit − crédit) et
+  // mouvements de l'exercice (toutes les autres lignes). Le solde N reste la somme
+  // des deux (ouverture + mouvements) — on le cumule à part pour rester exact.
+  const acc = new Map<
+    string,
+    { ouverture: Prisma.Decimal; debit: Prisma.Decimal; credit: Prisma.Decimal }
+  >();
   for (const l of lignes) {
-    const a = acc.get(l.compteNumero) ?? { debit: D(0), credit: D(0) };
-    a.debit = a.debit.plus(l.debit);
-    a.credit = a.credit.plus(l.credit);
+    const a =
+      acc.get(l.compteNumero) ?? { ouverture: D(0), debit: D(0), credit: D(0) };
+    if (l.piece.journal.code === "RAN") {
+      a.ouverture = a.ouverture.plus(l.debit).minus(l.credit);
+    } else {
+      a.debit = a.debit.plus(l.debit);
+      a.credit = a.credit.plus(l.credit);
+    }
     acc.set(l.compteNumero, a);
+  }
+
+  // Comptes qui n'ont qu'un solde N-1 (snapshot) sans mouvement N : on les fait
+  // exister dans la balance (N = 0) pour que la comparaison N / N-1 reste complète.
+  for (const numero of snapshotN1.keys()) {
+    if (!acc.has(numero)) acc.set(numero, { ouverture: D(0), debit: D(0), credit: D(0) });
   }
 
   const lignesBalance: BalanceLigne[] = [...acc.entries()].map(([numero, a]) => {
     const m = metaPour(meta, numero);
-    const solde = a.debit.minus(a.credit);
+    // Solde N = ouverture + (débit − crédit des mouvements de l'exercice).
+    const solde = a.ouverture.plus(a.debit).minus(a.credit);
     const debiteur = solde.isPositive() ? solde : D(0);
     const crediteur = solde.isNegative() ? solde.negated() : D(0);
+    const ouverture = a.ouverture.toNumber();
+    // N-1 : snapshot explicite s'il existe (P&L), sinon l'ouverture RAN (bilan).
+    const soldeNMoins1 = snapshotN1.has(numero) ? snapshotN1.get(numero)! : ouverture;
     return {
       compteNumero: numero,
       intitule: m.intitule,
       classeNum: m.classeNum,
       typeCompte: m.type,
-      ouverture: 0,
+      ouverture,
+      soldeNMoins1,
       debit: a.debit.toNumber(),
       credit: a.credit.toNumber(),
       soldeDebiteur: debiteur.toNumber(),

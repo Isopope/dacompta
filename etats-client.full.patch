@@ -1,0 +1,79 @@
+diff --git a/src/app/etats/EtatsClient.tsx b/src/app/etats/EtatsClient.tsx
+index 21c346c..33c7264 100644
+--- a/src/app/etats/EtatsClient.tsx
++++ b/src/app/etats/EtatsClient.tsx
+@@ -322,7 +322,7 @@ function ApercuBilan({ bilan }: { bilan: Bilan }) {
+       <div style={{ height: 16 }} />
+       <Colonne
+         titre="PASSIF"
+-        postes={[...bilan.passif, { compteNumero: "—", intitule: "Résultat de l'exercice", montant: bilan.resultatNet }]}
++        postes={[...bilan.passif, { compteNumero: "—", intitule: "Résultat de l'exercice", montant: bilan.resultatNet, montantNMoins1: 0 }]}
+         total={bilan.totalPassif}
+       />
+       <p className="muted" style={{ fontSize: 12, marginTop: 12 }}>
+@@ -340,11 +340,14 @@ function ApercuCompteResultat({ cr }: { cr: CompteResultat }) {
+       <div style={{ height: 16 }} />
+       <Colonne titre="PRODUITS (classe 7)" postes={cr.produits} total={cr.totalProduits} />
+       <p style={{ fontWeight: 600, marginTop: 12 }}>
+-        Résultat net : <span className={num}>{fmt0(cr.resultatNet)}</span>{" "}
++        Résultat net N : <span className={num}>{fmt0(cr.resultatNet)}</span>{" "}
+         <span className={cr.resultatNet >= 0 ? "badge" : "badge warn"}>
+           {cr.resultatNet >= 0 ? "bénéfice" : "perte"}
+         </span>
+       </p>
++      <p className="muted" style={{ marginTop: 4 }}>
++        Résultat net N-1 : <span className={num}>{fmt0(cr.resultatNetNMoins1)}</span>
++      </p>
+     </div>
+   );
+ }
+@@ -379,7 +382,7 @@ function ApercuFluxTresorerie({ flux }: { flux: FluxTresorerie }) {
+         </tbody>
+       </table>
+       <p className="muted" style={{ fontSize: 12, marginTop: 12 }}>
+-        ✓ Clôture = ouverture + variation · déduit des écritures (AUDCIF 2017 — remplace le TAFIRE)
++        ✓ Clôture = ouverture + variation · déduit des écritures (TFT — AUDCIF 2017)
+       </p>
+     </div>
+   );
+@@ -422,17 +425,22 @@ function Colonne({
+   titre,
+   postes,
+   total,
++  totalNMoins1,
+ }: {
+   titre: string;
+-  postes: { compteNumero: string; intitule: string; montant: number }[];
++  postes: { compteNumero: string; intitule: string; montant: number; montantNMoins1: number }[];
+   total: number;
++  totalNMoins1?: number;
+ }) {
++  // Total N-1 : fourni explicitement (ex. inclut le résultat) ou recalculé depuis les postes.
++  const totN1 = totalNMoins1 ?? postes.reduce((s, p) => s + p.montantNMoins1, 0);
+   return (
+     <table>
+       <thead>
+         <tr>
+           <th>{titre}</th>
+-          <th style={numCell}>Montant</th>
++          <th style={numCell}>Exercice N</th>
++          <th style={numCell}>Exercice N-1</th>
+         </tr>
+       </thead>
+       <tbody>
+@@ -443,6 +451,7 @@ function Colonne({
+               <span className="muted" style={{ fontSize: 13 }}>{p.intitule}</span>
+             </td>
+             <td className={num} style={numCell}>{fmt0(p.montant)}</td>
++            <td className={`${num} muted`} style={numCell}>{fmt(p.montantNMoins1)}</td>
+           </tr>
+         ))}
+       </tbody>
+@@ -450,6 +459,7 @@ function Colonne({
+         <tr style={{ fontWeight: 600 }}>
+           <td>Total</td>
+           <td className={num} style={numCell}>{fmt0(total)}</td>
++          <td className={`${num} muted`} style={numCell}>{fmt0(totN1)}</td>
+         </tr>
+       </tfoot>
+     </table>
