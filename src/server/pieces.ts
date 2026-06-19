@@ -31,12 +31,18 @@ export async function creerPiece(input: CreerPieceInput) {
     throw new Error(`Pièce déséquilibrée : débit ${totalDebit} ≠ crédit ${totalCredit}.`);
   }
 
+  // TVA = mouvements sur les comptes de TVA, quel que soit le sens :
+  //  - 445 TVA récupérable/déductible (au débit, sur les achats)
+  //  - 443 TVA facturée/collectée (au crédit, sur les ventes)
+  // NB : heuristique de POC. La TVA « réelle » devrait venir d'un moteur de taxes
+  // (account.tax chez Odoo), pas d'un préfixe de compte.
+  const estCompteTVA = (n: string) => n.startsWith("443") || n.startsWith("445");
   const totalTVA = lignes
-    .filter((l) => l.compteNumero.startsWith("445"))
-    .reduce((s, l) => s.plus(D(l.debit)), D(0));
+    .filter((l) => estCompteTVA(l.compteNumero))
+    .reduce((s, l) => s.plus(D(l.debit)).plus(D(l.credit)), D(0));
   const montantTTC = totalDebit;
   const montantTVA = totalTVA;
-  const montantHT = totalDebit.minus(totalTVA);
+  const montantHT = montantTTC.minus(montantTVA);
 
   return prisma.piece.create({
     data: {
