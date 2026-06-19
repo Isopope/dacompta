@@ -44,7 +44,7 @@ export function verifierResiduel(
   if (arrondiDevise(amountResidual, devise).isNegative()) {
     throw new ErreurIntegrite("Résiduel négatif.");
   }
-  const attendu = D(debit).minus(D(credit)).abs().minus(sommeLettree);
+  const attendu = arrondiDevise(D(debit).minus(D(credit)).abs().minus(sommeLettree), devise);
   if (!estNulDevise(D(amountResidual).minus(attendu), devise)) {
     throw new ErreurIntegrite(`Résiduel incohérent : ${amountResidual} attendu ${attendu}.`);
   }
