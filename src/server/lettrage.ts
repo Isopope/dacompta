@@ -61,8 +61,19 @@ export async function createLettrage(
   montant: number,
   options: { auto?: boolean } = {}
 ): Promise<LettrageDTO> {
-  const ligneDebit = await prisma.ligneEcriture.findUniqueOrThrow({ where: { id: ligneDebitId } });
-  const ligneCredit = await prisma.ligneEcriture.findUniqueOrThrow({ where: { id: ligneCreditId } });
+  const ligneDebit = await prisma.ligneEcriture.findUniqueOrThrow({
+    where: { id: ligneDebitId },
+    include: { piece: { select: { dossierId: true } } },
+  });
+  const ligneCredit = await prisma.ligneEcriture.findUniqueOrThrow({
+    where: { id: ligneCreditId },
+    include: { piece: { select: { dossierId: true } } },
+  });
+
+  // 0) Isolation multi-dossier : les deux lignes doivent appartenir au dossier passé.
+  if (ligneDebit.piece.dossierId !== dossierId || ligneCredit.piece.dossierId !== dossierId) {
+    throw new Error("Lettrage impossible : les lignes n'appartiennent pas au dossier indiqué.");
+  }
 
   // 1) Même compte de tiers obligatoire (on ne lettre pas deux comptes différents).
   if (ligneDebit.compteNumero !== ligneCredit.compteNumero) {
