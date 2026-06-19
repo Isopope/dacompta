@@ -12,6 +12,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <a href="/" style={{ color: "inherit", textDecoration: "none" }}>Tableau de bord</a>
           <a href="/plan-comptable" style={{ color: "inherit", textDecoration: "none" }}>Plan comptable</a>
           <a href="/ecritures" style={{ color: "inherit", textDecoration: "none" }}>Écritures</a>
+          <a href="/lettrage" style={{ color: "inherit", textDecoration: "none" }}>Lettrage</a>
           <a href="/budget" style={{ color: "inherit", textDecoration: "none" }}>Budget</a>
           <a href="/etats" style={{ color: "inherit", textDecoration: "none" }}>États & documents</a>
         </nav>

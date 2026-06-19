@@ -1,0 +1,89 @@
+Tu travailles sur DaCompta — C:\Polytech DI\Semestre 10\dacompte
+
+**Contexte projet complet dans CLAUDE.md à la racine du projet. Lis-le pour tout comprendre.**
+
+## Objectif
+Implémenter le **lettrage des comptes de tiers** inspiré d'Odoo (AccountPartialReconcile + amount_residual) pour adresser le pain point SYSCOHADA du pointage obligatoire et activer les exports PDF/Excel.
+
+Ce travail s'inscrit dans la continuité du dashboard déjà implémenté.
+
+## Architecture à implémenter
+### 1. Modèles de données
+**Ajouter à Prisma schema (`prisma/schema.prisma`)** :
+- Modèle `Lettrage` : lien entre deux lignes d'écriture (débit/crédit)
+- Champs supplémentaires sur `LigneEcriture` : `amountResidual` (Prisma.Decimal), `isLettres` (Boolean)
+
+### 2. Server actions
+**Créer `src/server/lettrage.ts`** :
+- `createLettrage(dossierId: string, ligneDebitId: string, ligneCreditId: string, montant: number): Lettrage`
+- `deleteLettrage(id: string): void`
+- `getLettragesByDossier(dossierId: string): Lettrage[]`
+- `getLettragesByLigne(ligneId: string): Lettrage[]` (pour vérifier si une ligne est déjà lettrée)
+
+### 3. Mise à jour des services existants
+**Modifier `src/server/pieces.ts` et `src/lib/etats/etats-financiers.ts`** :
+- Lors de la création/suppression d'un lettrage, mettre à jour `amountResidual` et `isLettres` des deux lignes concernées
+- Recalculer automatiquement les soldes dans les états financiers (Bilan, CR, TFT, Balance) en utilisant `amountResidual` au lieu du débit/crédit brut quand `isLettres` est true
+
+### 4. Règles de lettrage automatique (inspiré des reconciliation models d'Odoo)
+**Créer `src/server/reglesLettrage.ts`** :
+- Modèle `RegleLettrage` dans Prisma
+- Server actions pour CRUD des règles
+- Fonction `appliquerReglesLettrageAutomatique(dossierId: string): void` qui :
+  - Recherche les paires de lignes éligibles (même compte tiers, montant similaire dans tolérance, date proche)
+  - Crée les lettrages automatiquement selon les règles actives
+
+## Contraintes techniques
+- **TDD obligatoire** : écrire les tests D'ABORD dans `src/server/lettrage.test.ts`
+- Les tests doivent couvrir :
+  - Création d'un lettrage valide
+  - Mise à jour correcte de amountResidual et isLettres sur les deux lignes
+  - Empêcher le lettrage de lignes déjà totalement lettrées (amountResidual = 0)
+  - Empêcher le lettrage de lignes de sens opposé (débit avec débit, crédit avec crédit)
+  - Gestion du montant résiduel quand le lettrage partiel (montant < amountResidual)
+  - Annulation d'un lettrage restaure les amountResidual
+  - Tests des règles de lettrage automatique (même tiers, montant ±10%, date ±30j)
+- Utiliser Prisma transactions pour garantir la cohérence
+- Convertir Prisma.Decimal en number avec arrondi 2 décimales avant retour serveur action
+- Les server actions doivent avoir `"use server"`
+- Ne JAMAIS modifier le débit/crédit brut des lignes - seulement amountResidual et isLettres
+- Lors du calcul des soldes dans les états financiers :
+  - Si isLettres = true : utiliser amountResidual (qui sera 0)
+  - Sinon : utiliser débit - crédit comme avant
+- Respecter le design system existant (pas de nouvelles couleurs CSS obligatoires pour cette étape)
+- Code commenté en français
+- Commits conventionnels : `feat: lettrage`, `fix: ...`
+
+## Fichiers à créer/modifier
+| Fichier | Rôle |
+|---------|------|
+| `src/server/lettrage.test.ts` | **Tests TDD** (à écrire en premier) |
+| `src/server/lettrage.ts` | Server actions CRUD lettrage |
+| `src/server/reglesLettrage.ts` | Server actions règles + application automatique |
+| `prisma/schema.prisma` | Ajout modèle Lettrage + champs sur LigneEcriture |
+| `src/server/pieces.ts` | Mise à jour amountResidual/isLettres lors création/suppression lettrage |
+| `src/lib/etats/etats-financiers.ts` | Utiliser amountResidual dans calculs soldes |
+| `src/server/budget.test.ts` | À mettre à jour si besoin (le réalisé utilise déjà les écritures) |
+| `src/app/...` | **Pas d'UI pour cette étape** - focus sur le backend seulement |
+
+## Validation
+Après implementation :
+- `npx vitest run` doit passer avec 0 régressions (tests existants + nouveaux)
+- `npx tsc --noEmit` doit réussir
+- `npm run build` doit réussir
+- Le serveur doit démarrer sans erreur
+
+## Exemple de cas d'utilisation
+1. Écriture piece #1 : Facture client 411000 débit 100 000
+2. Écriture piece #2 : Paiement reçu 512000 débit 95 000, 411000 crédit 95 000
+3. Créer lettrage entre ligne 411000 débit (piece1) et ligne 411000 crédit (piece2) pour montant 95 000
+4. Résultat attendu :
+   - Ligne piece1 débit : amountResidual = 5 000, isLettres = false
+   - Ligne piece2 crédit : amountResidual = 0, isLettres = true
+   - Dans les états financiers : le compte 411000 montre un solde débiteur de 5 000
+5. Si on enregistre un escompte de 5 000 sur 657000 :
+   - Nouvelle écriture piece #3 : 657000 débit 5 000, 411000 crédit 5 000
+   - Lettrage entre ligne 411000 crédit (piece2, déjà à 0) et ligne 411000 débit (piece3) → pas possible car piece2 déjà lettré
+   - En fait : le lettrage doit être entre le reliquat de la facture (5 000 débit) et l'escompte (5 000 crédit)
+
+Ne pose pas de questions. Décide toi-même. Lance la commande complète à chaque fois. Exécute les tests après chaque étape.

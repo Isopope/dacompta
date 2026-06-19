@@ -460,3 +460,33 @@
 {"ts":"2026-06-19T16:40:17Z","event":"tool_use","tool":"","files":""}
 {"ts":"2026-06-19T16:40:28Z","event":"tool_use","tool":"","files":""}
 {"ts":"2026-06-19T16:40:42Z","event":"stop"}
+{"ts":"2026-06-19T16:44:50Z","event":"session_start","dir":"c:/Polytech DI/Semestre 10/dacompte"}
+{"ts":"2026-06-19T16:44:51Z","event":"session_start","dir":"c:/Polytech DI/Semestre 10/dacompte"}
+{"ts":"2026-06-19T16:58:51Z","event":"session_start","dir":"C:/Polytech DI/Semestre 10/dacompte"}
+{"ts":"2026-06-19T16:58:56Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T16:59:04Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T16:59:07Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T16:59:08Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T16:59:08Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T16:59:13Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T16:59:13Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T16:59:18Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T16:59:19Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T17:01:26Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T17:01:27Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T17:03:14Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T17:03:37Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T17:03:50Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T17:03:57Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T17:04:11Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T17:04:31Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T17:04:48Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T17:04:59Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T17:05:39Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T17:05:47Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T17:05:52Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T17:06:27Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T17:06:51Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T17:07:18Z","event":"tool_use","tool":"","files":""}
+{"ts":"2026-06-19T17:42:11Z","event":"session_start","dir":"C:/Polytech DI/Semestre 10/dacompte"}
+{"ts":"2026-06-19T17:44:56Z","event":"session_start","dir":"C:/Polytech DI/Semestre 10/dacompte"}

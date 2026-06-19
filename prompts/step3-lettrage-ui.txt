@@ -1,0 +1,124 @@
+Tu travailles sur DaCompta — C:\Polytech DI\Semestre 10\dacompte
+
+**Contexte projet complet dans CLAUDE.md à la racine du projet. Lis-le pour tout comprendre.**
+
+## Objectif
+Créer une interface de **lettrage manuel** accessible depuis le menu principal, permettant à l'utilisateur de sélectionner deux lignes d'écriture (une débit, une crédit) du même compte de tiers, de spécifier un montant à lettrer, et d'enregistrer le lettrage via l'action serveur existante `createLettrage`.
+
+Cette interface s'inspire du workflow d'Odoo : l'utilisateur voit les écritures ouvertes (résiduel > 0), choisit une ligne débit et une ligne crédit du même compte, saisit le montant, et valide.
+
+## Architecture à implémenter
+### 1. Nouvelle route
+- Chemin : `/lettrage` (page principale du lettrage)
+- Composant serveur : `src/app/lettrage/page.tsx` (chargement des données initiales)
+- Composant client : `src/app/lettrage/LettrageClient.tsx` (interface interactive)
+
+### 2. Server actions à ajouter / modifier
+Dans `src/server/lettrage.ts` (déjà présent) :
+- **`export async function getOpenLines(dossierId: string): Promise<OpenLineDTO[]>`**  
+  Retourne toutes les lignes d'écriture non totalement lettrées (`amountResidual > 0`) appartenant à des pièces non annulées, avec les informations suivantes :
+  - `id` (ligne)
+  - `pieceId`
+  - `pieceNumero` (numeroPiece)
+  - `pieceDate` (datePiece en ISO string)
+  - `journalCode`
+  - `compteNumero`
+  - `intituleCompte` (libellé du compte)
+  - `libelleLigne`
+  - `debit` (number)
+  - `credit` (number)
+  - `amountResidual` (number, absolu)
+  - `sens` : 1 si ligne débit (debit > credit), -1 si ligne crédit (credit > debit)  
+  - `pieceStatut` (BROUILLON/VALIDEE/ANNULEE)  
+
+  La fonction doit éviter de retourner les lignes des pièces ANNULEE.
+
+  Format DTO :
+  ```typescript
+  export interface OpenLineDTO {
+    id: string;
+    pieceId: string;
+    pieceNumero: string;
+    pieceDate: string; // ISO
+    journalCode: string;
+    compteNumero: string;
+    intituleCompte: string;
+    libelleLigne: string;
+    debit: number;
+    credit: number;
+    amountResidual: number; // absolu (|débit - crédit|)
+    sens: 1 | -1; // 1 = débit, -1 = crédit
+    pieceStatut: 'BROUILLON' | 'VALIDEE' | 'ANNULEE';
+  }
+  ```
+
+### 3. Composant client `LettrageClient.tsx`
+- Deux panneaux latéraux (gauche/droite) similaires à `EcrituresClient` mais adaptés :
+  - **Panneau gauche** : liste des lignes ouvertes, filtrable par compte ou par pièce, avec possibilité de sélectionner une ligne (débit ou crédit).
+  - **Panneau droit** : détails de la ligne sélectionnée, et formulaire de lettrage quand deux lignes sont sélectionnées (une débit, une crédit, même compte).
+- État client :
+  - `selectedDebitLineId: string | null`
+  - `selectedCreditLineId: string | null`
+  - Quand les deux sont sélectionnés et appartiennent au même compte, afficher :
+    - Montant maximum lettrable = min(amountResidual des deux lignes)
+    - Champ de saisie nombre « Montant à lettrer » (avec validation : > 0 et ≤ montant max)
+    - Bouton « Lettrer » (appelle `createLettrage` avec `auto: false`)
+    - Bouton « Réinitialiser »
+- Lorsqu'un lettrage est créé avec succès :
+  - Rafraîchir la liste des lignes ouvertes (via `getOpenLines`)
+  - Réinitialiser les sélections
+  - Afficher une notification succincte (ex: alert ou toast simple) – on peut utiliser `window.alert` pour simplicité dans le POC.
+- Gestion des erreurs : afficher l'erreur renvoyée par l'action serveur.
+
+### 4. Page serveur `src/app/lettrage/page.tsx`
+- Charger le premier dossier (comme dans les autres pages).
+- Fournir au client :
+  - `dossierId`
+  - Liste des comptes (pour filtres éventuels) – optionnel
+  - Liste des journaux (optionnel)
+- Le reste (lignes ouvertes) sera chargé côté client via l'action serveur `getOpenLines`.
+
+### 5. Mise à jour du layout
+- Dans `src/app/layout.tsx`, ajouter un lien de navigation vers `/lettrage` entre **Écritures** et **Budget** (ou après États & documents selon préférence, mais placer près d'Écritures est logique).
+- Exemple :
+  ```tsx
+  <a href=\"/ecritures\" style={{ color: \"inherit\", textDecoration: \"none\" }}>Écritures</a>
+  <a href=\"/lettrage\" style={{ color: \"inherit\", textDecoration: \"none\" }}>Lettrage</a>
+  <a href=\"/budget\" style={{ color: \"inherit\", textDecoration: \"none\" }}>Budget</a>
+  ```
+  (Ajuster l'ordre selon votre choix.)
+
+### 6. Contraintes techniques
+- TDD : écrire les tests D'ABORD pour la nouvelle server action `getOpenLines` dans `src/server/lettrage.test.ts`.
+- Les tests doivent couvrir :
+  - Retour de lignes ouvertes correctes (amountResidual > 0)
+  - Exclusion des pièces ANNULEE
+  - Tri par date ou autre ordre déterministe
+  - Conversion correcte des Prisma.Decimal en number
+  - Gestion du cas où il n'y a aucune ligne ouverte
+- Après implementation, faire tourner les tests pour s'assurer de zéro régression (les 10 tests de lettrage existants + les 6 de reglesLettrage + les autres).
+- Utiliser `"use server"` pour les nouvelles actions.
+- Ne JAMAIS modifier le débit/credit brut des lignes – seul le lettrage les affecte via amountResidual/isLettres.
+- Code commenté en français.
+- Commits conventionnels : `feat: interface lettrage manuel`.
+
+### 7. Livrables attendus
+| Fichier | Rôle |
+|---------|------|
+| `src/app/lettrage/page.tsx` | Page serveur (chargement initial) |
+| `src/app/lettrage/LettrageClient.tsx` | Composant client interactif |
+| `src/server/lettrage.test.ts` | Tests TDD pour `getOpenLines` (à ajouter) |
+| `src/server/lettrage.ts` | Implémentation de `getOpenLines` |
+| `src/app/layout.tsx` | Ajout du lien de navigation |
+| *(éventuel)* `src/app/lettrage/LettrageClient.module.css` | Si besoin de styles spécifiques, sinon réutiliser les classes existantes (`.container`, `.btn`, `.badge`, `.muted`, `.mono`, `.chip`, etc.) |
+
+### 8. Étapes suggérées (pour le modèle de prompt)
+1. Créer `src/server/lettrage.test.ts` – ajouter tests pour `getOpenLines`.
+2. Exécuter les tests (ils doivent échouer car la fonction n'existe pas encore).
+3. Créer/implémenter `getOpenLines` dans `src/server/lettrage.ts`.
+4. Exécuter les tests (ils doivent passer).
+5. Créer `src/app/lettrage/page.tsx` et `src/app/lettrage/LettrageClient.tsx`.
+6. Mettre à jour `src/app/layout.tsx`.
+7. Tester manuellement en lançant le dev server et en vérifiant que l'interface permet de créer un lettrage et que le solde des comptes est mis à jour.
+
+Ne pose pas de questions. Décide toi-même. Lance la commande complète à chaque fois. Exécute les tests après chaque étape.

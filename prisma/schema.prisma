@@ -53,6 +53,8 @@ model Dossier {
   pieces           Piece[]
   budgetPostes     BudgetPoste[]
   soldesAnterieurs SoldeAnterieur[]
+  lettrages        Lettrage[]
+  reglesLettrage   RegleLettrage[]
 }
 
 model Compte {
@@ -156,5 +158,48 @@ model LigneEcriture {
   ordre             Int
   sectionAnalytique String? // section analytique optionnelle
 
+  // Lettrage (inspiré d'Odoo amount_residual). amountResidual = montant restant
+  // à lettrer sur la ligne, en valeur absolue (initialisé à |débit − crédit|).
+  // isLettres passe à true quand le résiduel atteint 0. On ne touche JAMAIS
+  // debit/credit : seuls amountResidual/isLettres reflètent le lettrage.
+  amountResidual  Decimal    @default(0)
+  isLettres       Boolean    @default(false)
+  lettragesDebit  Lettrage[] @relation("LettrageDebit")
+  lettragesCredit Lettrage[] @relation("LettrageCredit")
+
   @@index([pieceId])
+}
+
+// Lettrage : rapprochement partiel entre une ligne débit et une ligne crédit du
+// même compte de tiers (équivalent AccountPartialReconcile d'Odoo).
+model Lettrage {
+  id            String        @id @default(cuid())
+  dossier       Dossier       @relation(fields: [dossierId], references: [id])
+  dossierId     String
+  ligneDebit    LigneEcriture @relation("LettrageDebit", fields: [ligneDebitId], references: [id], onDelete: Cascade)
+  ligneDebitId  String
+  ligneCredit   LigneEcriture @relation("LettrageCredit", fields: [ligneCreditId], references: [id], onDelete: Cascade)
+  ligneCreditId String
+  montant       Decimal       @default(0) // montant lettré (toujours > 0)
+  auto          Boolean       @default(false) // créé par une règle automatique
+  createdAt     DateTime      @default(now())
+
+  @@index([dossierId])
+  @@index([ligneDebitId])
+  @@index([ligneCreditId])
+}
+
+// Règle de lettrage automatique (inspirée des reconciliation models d'Odoo).
+model RegleLettrage {
+  id             String   @id @default(cuid())
+  dossier        Dossier  @relation(fields: [dossierId], references: [id])
+  dossierId      String
+  nom            String
+  prefixeCompte  String // comptes de tiers ciblés (ex. "411", "401")
+  tolerancePct   Float    @default(0) // écart de montant accepté en % (ex. 10)
+  toleranceJours Int      @default(0) // écart de date accepté en jours (ex. 30)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  @@index([dossierId])
 }

@@ -56,6 +56,10 @@ export async function creerPiece(input: CreerPieceInput) {
           credit: D(l.credit),
           ordre: i,
           sectionAnalytique: l.sectionAnalytique ?? null,
+          // Résiduel de lettrage initialisé au montant de la ligne (|débit − crédit|),
+          // non lettrée par défaut. Le lettrage le fera décroître vers 0.
+          amountResidual: D(Math.abs(l.debit - l.credit)),
+          isLettres: false,
         })),
       },
     },
