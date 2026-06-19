@@ -44,3 +44,6 @@ next-env.d.ts
 /prisma/dev.db
 /prisma/test.db
 .gstack/
+
+# scratch de pilotage (subagent-driven development)
+.superpowers/
