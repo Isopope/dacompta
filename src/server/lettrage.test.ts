@@ -1,3 +1,50 @@
+import { describe, it, expect, beforeEach } from "vitest";
+import { prisma } from "@/lib/db";
+import { resetDb } from "./test-helpers";
+import { getOpenLines } from "./lettrage";
+
+let dossierId: string;
+let journalId: string;
+
+beforeEach(async () => {
+  dossierId = await resetDb();
+  await prisma.compte.createMany({
+    data: [
+      { numero: "411000", intitule: "Clients", classeNum: 4, type: "DETAIL", reportNplus1: false, dossierId },
+      { numero: "707000", intitule: "Ventes", classeNum: 7, type: "DETAIL", reportNplus1: false, dossierId },
+    ],
+  });
+  const j = await prisma.journal.create({ data: { code: "OD", libelle: "Opérations diverses", dossierId } });
+  journalId = j.id;
+});
+
+// Helper bas niveau : crée une pièce + ses lignes SANS contrôle d'équilibre.
+// Certains cas de test ont besoin de pièces volontairement déséquilibrées pour
+// isoler le sens d'une ligne ouverte. amountResidual = |débit − crédit|.
+type LigneTest = { compteNumero: string; debit: number; credit: number };
+function piece(numeroPiece: string, lignes: LigneTest[], datePiece?: Date) {
+  return prisma.piece.create({
+    data: {
+      numeroPiece,
+      datePiece: datePiece ?? new Date(),
+      journalId,
+      dossierId,
+      lignes: {
+        create: lignes.map((l, i) => ({
+          compteNumero: l.compteNumero,
+          libelleLigne: l.compteNumero,
+          debit: l.debit,
+          credit: l.credit,
+          ordre: i,
+          amountResidual: Math.abs(l.debit - l.credit),
+          isLettres: false,
+        })),
+      },
+    },
+    include: { lignes: { orderBy: { ordre: "asc" } } },
+  });
+}
+
 describe("getOpenLines", () => {
   it("retourne un tableau vide quand il n'y a pas de lignes ouvertes", async () => {
     // Aucune pièce créée
@@ -81,11 +128,11 @@ describe("getOpenLines", () => {
       { compteNumero: "707000", debit: 0, credit: 30_000 },
     ], date1);
     const ouvertes = await getOpenLines(dossierId);
-    expect(ouvertes).toHaveLength(3);
-    // Expected order: pieceA (date1, numero A-1), pieceC (date1, numero C-1), pieceB (date2)
-    // Since numeroPiece strings: "A-1" < "C-1" < "B-1"
-    expect(ouvertes[0].pieceNumero).toBe("A-1");
-    expect(ouvertes[1].pieceNumero).toBe("C-1");
-    expect(ouvertes[2].pieceNumero).toBe("B-1");
+    // 3 pièces × 2 lignes = 6 lignes ouvertes. Tri attendu : (date, numéro, ordre).
+    // jan-1 : A-1 puis C-1 ; jan-2 : B-1 ; deux lignes par pièce (ordre 0 puis 1).
+    expect(ouvertes).toHaveLength(6);
+    expect(ouvertes.map((l) => l.pieceNumero)).toEqual([
+      "A-1", "A-1", "C-1", "C-1", "B-1", "B-1",
+    ]);
   });
 });
