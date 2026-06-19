@@ -89,5 +89,39 @@ export async function validerPiece(id: string) {
 }
 
 export async function annulerPiece(id: string) {
-  return prisma.piece.update({ where: { id }, data: { statut: "ANNULEE" } });
+  // Annuler une pièce lettrée doit d'abord défaire ses lettrages : sinon le
+  // résiduel des lignes en face resterait diminué alors que la contrepartie
+  // disparaît des soldes. (Odoo interdit de toucher une ligne rapprochée sans
+  // casser d'abord le rapprochement ; ici on casse automatiquement.)
+  return prisma.$transaction(async (tx) => {
+    const lignes = await tx.ligneEcriture.findMany({ where: { pieceId: id }, select: { id: true } });
+    const ligneIds = lignes.map((l) => l.id);
+
+    const lettrages = ligneIds.length
+      ? await tx.lettrage.findMany({
+          where: { OR: [{ ligneDebitId: { in: ligneIds } }, { ligneCreditId: { in: ligneIds } }] },
+        })
+      : [];
+
+    if (lettrages.length) {
+      // Montant à restituer par ligne (cumulé si plusieurs lettrages la touchent).
+      const restitution = new Map<string, number>();
+      for (const lt of lettrages) {
+        const m = Number(lt.montant);
+        restitution.set(lt.ligneDebitId, (restitution.get(lt.ligneDebitId) ?? 0) + m);
+        restitution.set(lt.ligneCreditId, (restitution.get(lt.ligneCreditId) ?? 0) + m);
+      }
+      for (const [ligneId, montant] of restitution) {
+        const ligne = await tx.ligneEcriture.findUniqueOrThrow({ where: { id: ligneId } });
+        const nouveau = Math.round((Number(ligne.amountResidual) + montant) * 100) / 100;
+        await tx.ligneEcriture.update({
+          where: { id: ligneId },
+          data: { amountResidual: D(nouveau), isLettres: nouveau === 0 },
+        });
+      }
+      await tx.lettrage.deleteMany({ where: { id: { in: lettrages.map((l) => l.id) } } });
+    }
+
+    return tx.piece.update({ where: { id }, data: { statut: "ANNULEE" } });
+  });
 }
