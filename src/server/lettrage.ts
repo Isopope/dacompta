@@ -2,6 +2,7 @@
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { verifierLettrageValide } from "@/lib/comptabilite/integrite";
 
 const D = (n: Prisma.Decimal.Value) => new Prisma.Decimal(n);
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -61,52 +62,36 @@ export async function createLettrage(
   montant: number,
   options: { auto?: boolean } = {}
 ): Promise<LettrageDTO> {
-  const ligneDebit = await prisma.ligneEcriture.findUniqueOrThrow({
-    where: { id: ligneDebitId },
-    include: { piece: { select: { dossierId: true } } },
+  const [ligneDebit, ligneCredit, dossier] = await Promise.all([
+    prisma.ligneEcriture.findUniqueOrThrow({
+      where: { id: ligneDebitId },
+      include: { piece: { select: { dossierId: true } } },
+    }),
+    prisma.ligneEcriture.findUniqueOrThrow({
+      where: { id: ligneCreditId },
+      include: { piece: { select: { dossierId: true } } },
+    }),
+    prisma.dossier.findUniqueOrThrow({ where: { id: dossierId }, select: { devise: true } }),
+  ]);
+
+  // Validation via l'invariant I4 — remplace tous les checks inline précédents.
+  verifierLettrageValide({
+    compteDebit: ligneDebit.compteNumero,
+    compteCredit: ligneCredit.compteNumero,
+    dossierDebit: ligneDebit.piece.dossierId,
+    dossierCredit: ligneCredit.piece.dossierId,
+    dossierAttendu: dossierId,
+    sensDebitOk: ligneDebit.debit.greaterThan(ligneDebit.credit),
+    sensCreditOk: ligneCredit.credit.greaterThan(ligneCredit.debit),
+    montant: new Prisma.Decimal(montant),
+    residuelDebit: ligneDebit.amountResidual,
+    residuelCredit: ligneCredit.amountResidual,
+    devise: dossier.devise,
   });
-  const ligneCredit = await prisma.ligneEcriture.findUniqueOrThrow({
-    where: { id: ligneCreditId },
-    include: { piece: { select: { dossierId: true } } },
-  });
 
-  // 0) Isolation multi-dossier : les deux lignes doivent appartenir au dossier passé.
-  if (ligneDebit.piece.dossierId !== dossierId || ligneCredit.piece.dossierId !== dossierId) {
-    throw new Error("Lettrage impossible : les lignes n'appartiennent pas au dossier indiqué.");
-  }
-
-  // 1) Même compte de tiers obligatoire (on ne lettre pas deux comptes différents).
-  if (ligneDebit.compteNumero !== ligneCredit.compteNumero) {
-    throw new Error(
-      `Lettrage impossible : comptes différents (${ligneDebit.compteNumero} ≠ ${ligneCredit.compteNumero}).`
-    );
-  }
-
-  // 2) Sens : la 1re ligne doit être au débit, la 2e au crédit.
-  const debitEstDebit = ligneDebit.debit.greaterThan(ligneDebit.credit);
-  const creditEstCredit = ligneCredit.credit.greaterThan(ligneCredit.debit);
-  if (!debitEstDebit || !creditEstCredit) {
-    throw new Error(
-      "Lettrage impossible : sens incompatible — il faut une ligne débit et une ligne crédit."
-    );
-  }
-
-  // 3) Résiduel disponible sur chaque ligne (valeur absolue).
+  const m = round2(montant);
   const resDebit = round2(Number(ligneDebit.amountResidual));
   const resCredit = round2(Number(ligneCredit.amountResidual));
-  if (resDebit <= 0 || resCredit <= 0) {
-    throw new Error("Lettrage impossible : une des lignes est déjà totalement lettrée (résiduel nul).");
-  }
-
-  // 4) Le montant ne peut excéder le plus petit des deux résiduels.
-  const m = round2(montant);
-  const maxLettrable = Math.min(resDebit, resCredit);
-  if (m <= 0 || m > maxLettrable) {
-    throw new Error(
-      `Lettrage impossible : montant ${m} invalide (résiduel disponible ${maxLettrable}).`
-    );
-  }
-
   const nouveauResDebit = round2(resDebit - m);
   const nouveauResCredit = round2(resCredit - m);
 

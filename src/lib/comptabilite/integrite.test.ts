@@ -3,7 +3,7 @@ import fc from "fast-check";
 import { Prisma } from "@prisma/client";
 import {
   ErreurIntegrite, verifierSignesLigne, verifierPieceNonVide,
-  verifierEquilibre, verifierResiduel,
+  verifierEquilibre, verifierResiduel, verifierLettrageValide,
 } from "./integrite";
 
 const D = (n: number | string) => new Prisma.Decimal(n);
@@ -47,4 +47,20 @@ describe("verifierResiduel", () => {
     expect(() => verifierResiduel(D(50), D(100), D(0), D(60), "XOF")).toThrow(ErreurIntegrite); // 100-60=40≠50
     expect(() => verifierResiduel(D(0), D(100), D(0), D(150), "XOF")).toThrow(ErreurIntegrite); // sur-lettrage
   });
+});
+
+const base = {
+  compteDebit: "411000", compteCredit: "411000",
+  dossierDebit: "d1", dossierCredit: "d1", dossierAttendu: "d1",
+  sensDebitOk: true, sensCreditOk: true,
+  montant: D(50), residuelDebit: D(100), residuelCredit: D(50), devise: "XOF",
+};
+
+describe("verifierLettrageValide", () => {
+  it("accepte un lettrage cohérent", () => { expect(() => verifierLettrageValide(base)).not.toThrow(); });
+  it("refuse des comptes différents", () => { expect(() => verifierLettrageValide({ ...base, compteCredit: "401000" })).toThrow(ErreurIntegrite); });
+  it("refuse un dossier différent", () => { expect(() => verifierLettrageValide({ ...base, dossierCredit: "d2" })).toThrow(ErreurIntegrite); });
+  it("refuse un montant > min(résiduels)", () => { expect(() => verifierLettrageValide({ ...base, montant: D(80) })).toThrow(ErreurIntegrite); });
+  it("refuse un montant ≤ 0", () => { expect(() => verifierLettrageValide({ ...base, montant: D(0) })).toThrow(ErreurIntegrite); });
+  it("refuse un sens incompatible", () => { expect(() => verifierLettrageValide({ ...base, sensDebitOk: false })).toThrow(ErreurIntegrite); });
 });

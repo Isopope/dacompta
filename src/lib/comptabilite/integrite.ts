@@ -36,6 +36,31 @@ export function verifierEquilibre(lignes: LigneMontant[], devise: string): void 
   }
 }
 
+export interface LettrageArgs {
+  compteDebit: string; compteCredit: string;
+  dossierDebit: string; dossierCredit: string; dossierAttendu: string;
+  sensDebitOk: boolean; sensCreditOk: boolean;
+  montant: Prisma.Decimal; residuelDebit: Prisma.Decimal; residuelCredit: Prisma.Decimal;
+  devise: string;
+}
+
+/** I4 — Conditions d'un lettrage valide entre une ligne débit et une ligne crédit. */
+export function verifierLettrageValide(a: LettrageArgs): void {
+  if (a.dossierDebit !== a.dossierAttendu || a.dossierCredit !== a.dossierAttendu) {
+    throw new ErreurIntegrite("Les lignes n'appartiennent pas au dossier indiqué.");
+  }
+  if (a.compteDebit !== a.compteCredit) {
+    throw new ErreurIntegrite(`Comptes différents (${a.compteDebit} ≠ ${a.compteCredit}).`);
+  }
+  if (!a.sensDebitOk || !a.sensCreditOk) {
+    throw new ErreurIntegrite("Sens incompatible — il faut une ligne débit et une ligne crédit.");
+  }
+  const max = Prisma.Decimal.min(a.residuelDebit, a.residuelCredit);
+  if (a.montant.lessThanOrEqualTo(0) || a.montant.greaterThan(max)) {
+    throw new ErreurIntegrite(`Montant ${a.montant} invalide (résiduel disponible ${max}).`);
+  }
+}
+
 /** I5 — amountResidual = |debit − credit| − Σ(lettré), et ≥ 0. */
 export function verifierResiduel(
   amountResidual: Prisma.Decimal, debit: Prisma.Decimal, credit: Prisma.Decimal,
