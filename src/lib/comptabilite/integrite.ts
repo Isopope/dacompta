@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { arrondiDevise, estNulDevise } from "./devise";
 
@@ -72,5 +73,38 @@ export function verifierResiduel(
   const attendu = arrondiDevise(D(debit).minus(D(credit)).abs().minus(sommeLettree), devise);
   if (!estNulDevise(D(amountResidual).minus(attendu), devise)) {
     throw new ErreurIntegrite(`Résiduel incohérent : ${amountResidual} attendu ${attendu}.`);
+  }
+}
+
+export interface PieceHashInput {
+  dossierId: string; journalId: string; datePieceISO: string;
+  exercice: number; numeroPiece: string;
+  lignes: { compteNumero: string; debit: string; credit: string; ordre: number }[];
+}
+
+/** I6 — Empreinte déterministe d'une pièce validée, chaînée à la précédente. */
+export function calculerHash(piece: PieceHashInput, hashPrecedent: string | null): string {
+  const lignes = [...piece.lignes].sort((a, b) => a.ordre - b.ordre)
+    .map((l) => [l.ordre, l.compteNumero, l.debit, l.credit]);
+  const charge = JSON.stringify({
+    dossierId: piece.dossierId, journalId: piece.journalId, datePieceISO: piece.datePieceISO,
+    exercice: piece.exercice, numeroPiece: piece.numeroPiece, lignes, hashPrecedent,
+  });
+  return createHash("sha256").update(charge).digest("hex");
+}
+
+/** Rejoue et vérifie la chaîne (pièces ordonnées par numéro de séquence). */
+export function verifierChaine(
+  pieces: (PieceHashInput & { hash: string; hashPrecedent: string | null })[],
+): void {
+  let precedent: string | null = null;
+  for (const p of pieces) {
+    if (p.hashPrecedent !== precedent) {
+      throw new ErreurIntegrite(`Rupture de chaîne sur ${p.numeroPiece} : maillon précédent incorrect.`);
+    }
+    if (calculerHash(p, precedent) !== p.hash) {
+      throw new ErreurIntegrite(`Pièce ${p.numeroPiece} altérée : hash non reproductible.`);
+    }
+    precedent = p.hash;
   }
 }

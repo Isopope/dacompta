@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import {
   ErreurIntegrite, verifierSignesLigne, verifierPieceNonVide,
   verifierEquilibre, verifierResiduel, verifierLettrageValide,
+  calculerHash, verifierChaine, type PieceHashInput,
 } from "./integrite";
 
 const D = (n: number | string) => new Prisma.Decimal(n);
@@ -63,4 +64,35 @@ describe("verifierLettrageValide", () => {
   it("refuse un montant > min(résiduels)", () => { expect(() => verifierLettrageValide({ ...base, montant: D(80) })).toThrow(ErreurIntegrite); });
   it("refuse un montant ≤ 0", () => { expect(() => verifierLettrageValide({ ...base, montant: D(0) })).toThrow(ErreurIntegrite); });
   it("refuse un sens incompatible", () => { expect(() => verifierLettrageValide({ ...base, sensDebitOk: false })).toThrow(ErreurIntegrite); });
+});
+
+const p = (numero: string, debit: string): PieceHashInput => ({
+  dossierId: "d1", journalId: "j1", datePieceISO: "2020-01-01T00:00:00.000Z",
+  exercice: 2020, numeroPiece: numero,
+  lignes: [
+    { compteNumero: "411000", debit, credit: "0", ordre: 0 },
+    { compteNumero: "707000", debit: "0", credit: debit, ordre: 1 },
+  ],
+});
+
+describe("inaltérabilité", () => {
+  it("hash déterministe", () => {
+    expect(calculerHash(p("A/2020/0001", "100"), null)).toBe(calculerHash(p("A/2020/0001", "100"), null));
+  });
+  it("toute altération d'une ligne change le hash", () => {
+    fc.assert(fc.property(fc.integer({ min: 1, max: 999999 }).filter((n) => n !== 100), (autre) => {
+      expect(calculerHash(p("A/2020/0001", String(autre)), null)).not.toBe(calculerHash(p("A/2020/0001", "100"), null));
+    }));
+  });
+  it("verifierChaine détecte une rupture", () => {
+    const h1 = calculerHash(p("A/2020/0001", "100"), null);
+    const h2 = calculerHash(p("A/2020/0002", "200"), h1);
+    const chaine = [
+      { ...p("A/2020/0001", "100"), hash: h1, hashPrecedent: null },
+      { ...p("A/2020/0002", "200"), hash: h2, hashPrecedent: h1 },
+    ];
+    expect(() => verifierChaine(chaine)).not.toThrow();
+    chaine[0].hash = "falsifié";
+    expect(() => verifierChaine(chaine)).toThrow(ErreurIntegrite);
+  });
 });
