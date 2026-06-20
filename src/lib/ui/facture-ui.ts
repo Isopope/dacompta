@@ -49,12 +49,14 @@ export function apercuTotaux(
     tva = tva.plus(r.montantTaxe);
   }
 
-  // Le TTC doit être arrondi à la précision de la devise (contrainte devise).
-  const ttc = arrondiDevise(ht.plus(tva), devise);
+  // Tout montant retourné doit être arrondi à la précision de la devise (contrainte devise).
+  const htArrondi  = arrondiDevise(ht,           devise);
+  const tvaArrondi = arrondiDevise(tva,           devise);
+  const ttc        = arrondiDevise(ht.plus(tva),  devise);
 
   return {
-    ht:  ht.toNumber(),
-    tva: tva.toNumber(),
+    ht:  htArrondi.toNumber(),
+    tva: tvaArrondi.toNumber(),
     ttc: ttc.toNumber(),
   };
 }
