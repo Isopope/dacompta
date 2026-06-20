@@ -11,13 +11,13 @@
 
 ## Vue d'ensemble & séquencement recommandé
 
-| Ordre | Point | Sujet | Effort | Risque | Dépend de |
-|------:|-------|-------|:------:|:------:|-----------|
-| 1 | **#7** | Devise & arrondi (FCFA 0 décimale) | M | Faible | — |
-| 2 | **#10a** | Intégrité référentielle (FK `compteNumero`) | M | Moyen | — | **traité** — cf. `docs/superpowers/specs/2026-06-19-integrite-comptable-design.md` |
-| 3 | **#4 / #10b** | Séquence légale & inaltérabilité des pièces | L | Moyen | #7 | **traité** — cf. `docs/superpowers/specs/2026-06-19-integrite-comptable-design.md` |
-| 4 | **#8** | Tiers structurés & comptes auxiliaires | XL | Élevé | #7, #10a |
-| 5 | **#9** | États normés AUDCIF & SIG | L | Faible | (#8 pour certaines rubriques) |
+| Ordre | Point | Sujet | Effort | Risque | Dépend de | Statut |
+|------:|-------|-------|:------:|:------:|-----------|--------|
+| 1 | **#7** | Devise & arrondi (FCFA 0 décimale) | M | Faible | — | — |
+| 2 | **#10a** | Intégrité référentielle (FK `compteNumero`) | M | Moyen | — | ✅ traité |
+| 3 | **#4 / #10b** | Séquence légale & inaltérabilité des pièces | L | Moyen | #7 | ✅ traité |
+| 4 | **#8** | Tiers structurés & comptes auxiliaires | XL | Élevé | #7, #10a | — |
+| 5 | **#9** | États normés AUDCIF & SIG | L | Faible | (#8 pour certaines rubriques) | — |
 
 **Graphe de dépendances**
 
