@@ -52,6 +52,7 @@ Ne PAS mettre de Prisma calls dans les composants client. Passer par les server 
 | `src/lib/etats/etats-financiers.ts` | Bilan, CR, TFT à partir de la balance |
 | `src/lib/syscohada/referentiel.ts` | Données SYSCOHADA révisé |
 | `src/lib/syscohada/compte-logic.ts` | Logique métier comptes (collectifs, analyse classe) |
+| `src/lib/comptabilite/integrite.ts` | Invariants purs : équilibre, signes, résiduel, lettrage, hash chaîné (I1–I6) — séquence légale, inaltérabilité, extourne, migration fail-fast |
 
 ### Conventions code
 - Code commenté en français.
@@ -72,7 +73,7 @@ npx vitest run        # tout
 npx vitest --watch    # mode watch
 ```
 BDD : test.db avec resetDb() dans `src/server/test-setup.ts`.
-60 tests verts (balance, états, TFT, budget, comptes, import, pièces).
+127 tests verts (balance, états, TFT, budget, comptes, import, pièces, intégrité, inaltérabilité, extourne, lettrage, contraintes DB).
 
 ## Build
 ```bash

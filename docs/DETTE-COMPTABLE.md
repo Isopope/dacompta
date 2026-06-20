@@ -14,8 +14,8 @@
 | Ordre | Point | Sujet | Effort | Risque | Dépend de |
 |------:|-------|-------|:------:|:------:|-----------|
 | 1 | **#7** | Devise & arrondi (FCFA 0 décimale) | M | Faible | — |
-| 2 | **#10a** | Intégrité référentielle (FK `compteNumero`) | M | Moyen | — |
-| 3 | **#4 / #10b** | Séquence légale & inaltérabilité des pièces | L | Moyen | #7 |
+| 2 | **#10a** | Intégrité référentielle (FK `compteNumero`) | M | Moyen | — | **traité** — cf. `docs/superpowers/specs/2026-06-19-integrite-comptable-design.md` |
+| 3 | **#4 / #10b** | Séquence légale & inaltérabilité des pièces | L | Moyen | #7 | **traité** — cf. `docs/superpowers/specs/2026-06-19-integrite-comptable-design.md` |
 | 4 | **#8** | Tiers structurés & comptes auxiliaires | XL | Élevé | #7, #10a |
 | 5 | **#9** | États normés AUDCIF & SIG | L | Faible | (#8 pour certaines rubriques) |
 
@@ -63,7 +63,7 @@ devise 3 décimales ; `equilibre` du bilan exact (et non `< 0.01`) en FCFA.
 
 ---
 
-## #10a — Intégrité référentielle (FK sur `compteNumero`)  ·  Effort M · Risque moyen
+## #10a — Intégrité référentielle (FK sur `compteNumero`)  ·  Effort M · Risque moyen  ·  ✅ TRAITÉ
 
 **Constat.** `LigneEcriture.compteNumero`, `SoldeAnterieur.compteNumero`,
 `BudgetPoste.compteLie` référencent `Compte.numero` **sans FK** (commenté « pas de
@@ -93,7 +93,7 @@ migration à mener par étapes pour ne pas tout réécrire d'un coup.
 
 ---
 
-## #4 / #10b — Séquence légale & inaltérabilité des pièces  ·  Effort L · Risque moyen
+## #4 / #10b — Séquence légale & inaltérabilité des pièces  ·  Effort L · Risque moyen  ·  ✅ TRAITÉ
 
 **Constat.** `validerPiece` (`src/server/pieces.ts`) ne fait **aucun contrôle** :
 simple passage `statut = VALIDEE`. `numeroPiece` est **saisi par l'utilisateur**
@@ -194,8 +194,8 @@ dettes par tiers) gagnent en finesse une fois #8 livré, mais une v1 est livrabl
 ## Synthèse
 
 1. **#7 Devise/arrondi** — fondation « argent exact », débloque le reste.
-2. **#10a FK** — fiabilise les données avant d'y greffer tiers et légal.
-3. **#4/#10b Séquence & inaltérabilité** — conformité légale (séquence, verrou, hash, extourne).
+2. **#10a FK** — fiabilise les données avant d'y greffer tiers et légal. ✅ **traité** (Tasks 6–8, 11 ; spec `docs/superpowers/specs/2026-06-19-integrite-comptable-design.md`)
+3. **#4/#10b Séquence & inaltérabilité** — conformité légale (séquence, verrou, hash, extourne). ✅ **traité** (Tasks 2–5, 9–10 ; même spec)
 4. **#8 Tiers/auxiliaires** — le grand chantier (lettrage et états par tiers).
 5. **#9 AUDCIF/SIG** — états normés, parallélisable.
 
