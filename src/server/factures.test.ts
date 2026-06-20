@@ -5,7 +5,8 @@ import { creerCompte } from "./comptes";
 import { creerTiers } from "./tiers";
 import { creerTaxe, creerFacture } from "./taxes";
 import { validerPiece } from "./pieces";
-import { listerFactures } from "./factures";
+import { listerFactures, getFacture } from "./factures";
+import { enregistrerPaiement } from "./paiements";
 
 let dossierId: string; let journalVente: string;
 beforeEach(async () => {
@@ -44,4 +45,31 @@ it("filtre par statut et par texte (numéro/tiers)", async () => {
   expect(await listerFactures(dossierId, { statut: "BROUILLON" })).toHaveLength(0);
   expect(await listerFactures(dossierId, { texte: "alpha" })).toHaveLength(1);
   expect(await listerFactures(dossierId, { texte: "zzz" })).toHaveLength(0);
+});
+
+it("getFacture renvoie en-tête, lignes et compteurs smart buttons", async () => {
+  const client = await creerTiers({ dossierId, code: "C001", nom: "Alpha", type: "CLIENT" });
+  await prisma.journal.create({ data: { code: "CAI", libelle: "Caisse", type: "cash", dossierId } });
+  const f = await creerFacture({
+    dossierId, journalId: journalVente, numeroPiece: "VT-9", sens: "VENTE",
+    tiersId: client.id, compteTiersNumero: "411100",
+    lignes: [{ compteNumero: "707000", libelleLigne: "Vente", montantHT: 100_000, taxeCode: "TVA18" }],
+  });
+  await validerPiece(f.id);
+
+  const detail = await getFacture(dossierId, f.id);
+  expect(detail.montantTTC).toBe(118_000);
+  expect(detail.tiersNom).toBe("Alpha");
+  expect(detail.lignes.length).toBeGreaterThanOrEqual(3); // 707, 443, 411
+  expect(detail.nbPaiements).toBe(0);
+  expect(detail.estLettree).toBe(false);
+
+  const journalCaisse = (await prisma.journal.findFirstOrThrow({ where: { dossierId, code: "CAI" } })).id;
+  await enregistrerPaiement({
+    dossierId, journalId: journalCaisse, numeroPiece: "CAI-9", sens: "ENTRANT",
+    tiersId: client.id, compteTresorerieNumero: "521000", compteTiersNumero: "411100", montant: 118_000,
+  });
+  const apres = await getFacture(dossierId, f.id);
+  expect(apres.etatPaiement).toBe("PAYE");
+  expect(apres.estLettree).toBe(true);
 });
