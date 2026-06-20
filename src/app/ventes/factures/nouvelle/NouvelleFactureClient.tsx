@@ -36,6 +36,7 @@ export function NouvelleFactureClient({
   const [numero, setNumero] = useState("");
   const [lignes, setLignes] = useState<LigneHT[]>([]);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   // Map code → taux pour calcul d'aperçu côté client
   const tauxParCode = new Map(taxes.map((t) => [t.code, t.taux]));
@@ -51,9 +52,12 @@ export function NouvelleFactureClient({
 
   /** Soumet le formulaire et redirige vers la page de détail de la facture créée. */
   async function enregistrer() {
+    if (busy) return;
+    setBusy(true);
     setErreur(null);
     if (!journalVenteId) {
       setErreur("Aucun journal de vente configuré.");
+      setBusy(false);
       return;
     }
     try {
@@ -77,6 +81,8 @@ export function NouvelleFactureClient({
       router.push(`/ventes/factures/${f.id}`);
     } catch (e) {
       setErreur(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -130,7 +136,7 @@ export function NouvelleFactureClient({
         <button
           className="btn primary"
           onClick={enregistrer}
-          disabled={!tiersId || lignes.length === 0}
+          disabled={busy || !tiersId || lignes.length === 0}
         >
           Créer la facture (brouillon)
         </button>

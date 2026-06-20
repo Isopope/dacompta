@@ -1,5 +1,6 @@
 // Page serveur : formulaire d'encaissement d'une facture client.
 // Reçoit l'identifiant de la facture via searchParams (?facture=<id>).
+import { notFound } from "next/navigation";
 import { Shell } from "@/components/Shell";
 import { getDossierIdCookie } from "@/lib/dossier-context";
 import { prisma } from "@/lib/db";
@@ -24,10 +25,15 @@ export default async function Page({
   }
 
   // Charge le document facture complet (lignes, tiers, montants).
-  const f = await getFacture(dossierId, facture);
+  // notFound() sur id invalide → 404 propre plutôt qu'une erreur 500.
+  let f;
+  try { f = await getFacture(dossierId, facture); }
+  catch { notFound(); }
+  // f est garanti non-null après notFound() — le cast évite les checks null en dessous.
+  const factureCourante = f!;
 
   // Ligne de tiers : premier compte 411x (client collectif).
-  const ligneClient = f.lignes.find((l) => l.compteNumero.startsWith("411"));
+  const ligneClient = factureCourante.lignes.find((l) => l.compteNumero.startsWith("411"));
 
   // Charge en parallèle les journaux de trésorerie et les comptes classe 5 actifs.
   const [journaux, comptesTresorerie] = await Promise.all([
@@ -42,21 +48,21 @@ export default async function Page({
   ]);
 
   // Résiduel simplifié : montant TTC de la facture (le backend lettre au réel).
-  const residuel = f.montantTTC;
+  const residuel = factureCourante.montantTTC;
 
   return (
     <Shell
       module="ventes"
       breadcrumb={[
         { label: "Ventes", href: "/ventes/factures" },
-        { label: f.numeroPiece, href: `/ventes/factures/${f.id}` },
+        { label: factureCourante.numeroPiece, href: `/ventes/factures/${factureCourante.id}` },
         { label: "Paiement" },
       ]}
     >
       <PaiementClient
         dossierId={dossierId}
-        factureId={f.id}
-        tiersId={f.tiersId ?? ""}
+        factureId={factureCourante.id}
+        tiersId={factureCourante.tiersId ?? ""}
         compteClient={ligneClient?.compteNumero ?? "411100"}
         residuel={residuel}
         journaux={journaux}

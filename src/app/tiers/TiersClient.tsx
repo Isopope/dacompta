@@ -18,13 +18,16 @@ export function TiersClient({ tiers, dossierId }: { tiers: T[]; dossierId: strin
   const [code, setCode] = useState(""); const [nom, setNom] = useState(""); const [type, setType] = useState("CLIENT");
   // Message d'erreur éventuel retourné par la server action
   const [erreur, setErreur] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   /** Soumet le formulaire : appelle la server action creerTiers puis rafraîchit la page. */
   async function ajouter() {
+    if (busy) return;
+    setBusy(true);
     setErreur(null);
     try { await creerTiers({ dossierId, code, nom, type: type as TypeTiers }); }
-    catch (e) { setErreur(e instanceof Error ? e.message : "Erreur"); return; }
-    setCode(""); setNom(""); setType("CLIENT"); router.refresh();
+    catch (e) { setErreur(e instanceof Error ? e.message : "Erreur"); setBusy(false); return; }
+    setCode(""); setNom(""); setType("CLIENT"); setBusy(false); router.refresh();
   }
 
   return (
@@ -38,7 +41,7 @@ export function TiersClient({ tiers, dossierId }: { tiers: T[]; dossierId: strin
             <option value="CLIENT">Client</option><option value="FOURNISSEUR">Fournisseur</option><option value="AUTRE">Autre</option>
           </select>
         </label>
-        <button className="btn primary" onClick={ajouter} disabled={!code.trim() || !nom.trim()}>+ Ajouter</button>
+        <button className="btn primary" onClick={ajouter} disabled={busy || !code.trim() || !nom.trim()}>+ Ajouter</button>
         {/* Affichage de l'erreur si la création échoue */}
         {erreur && <span className="badge warn">{erreur}</span>}
       </div>

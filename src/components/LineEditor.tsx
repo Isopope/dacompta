@@ -1,6 +1,7 @@
 "use client";
 // Composant primitif d'édition des lignes de facture (HT + taxe).
 // Chaque ligne porte : compte produit, libellé, montant HT, code taxe.
+import { useRef } from "react";
 
 /** Représente une ligne de saisie hors taxe. */
 export interface LigneHT {
@@ -8,6 +9,8 @@ export interface LigneHT {
   libelleLigne: string;
   montantHT: number;
   taxeCode: string;
+  /** Clé interne UI uniquement — jamais envoyée au serveur. Stabilise le `key` React lors des suppressions. */
+  _key?: string;
 }
 
 /**
@@ -26,11 +29,14 @@ export function LineEditor({
   lignes: LigneHT[];
   onChange: (l: LigneHT[]) => void;
 }) {
+  // Compteur stable pour générer des clés internes uniques (évite Date.now/Math.random).
+  const cle = useRef(0);
+
   /** Applique un patch partiel sur la ligne à l'index i. */
   const maj = (i: number, patch: Partial<LigneHT>) =>
     onChange(lignes.map((l, j) => (j === i ? { ...l, ...patch } : l)));
 
-  /** Ajoute une nouvelle ligne avec les valeurs par défaut. */
+  /** Ajoute une nouvelle ligne avec les valeurs par défaut et une clé stable. */
   const ajouter = () =>
     onChange([
       ...lignes,
@@ -39,6 +45,7 @@ export function LineEditor({
         libelleLigne: "",
         montantHT: 0,
         taxeCode: taxes[0]?.code ?? "",
+        _key: `cle-${cle.current++}`,
       },
     ]);
 
@@ -59,7 +66,7 @@ export function LineEditor({
         </thead>
         <tbody>
           {lignes.map((l, i) => (
-            <tr key={i}>
+            <tr key={l._key ?? i}>
               {/* Sélection du compte produit/charge */}
               <td style={{ padding: 6 }}>
                 <select

@@ -47,3 +47,7 @@ next-env.d.ts
 
 # scratch de pilotage (subagent-driven development)
 .superpowers/
+
+# scripts scratch racine (non suivis, ne pas commiter)
+check_dossier*.js
+update_*exercice*.js

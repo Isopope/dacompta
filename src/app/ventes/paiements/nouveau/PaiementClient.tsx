@@ -30,9 +30,12 @@ export function PaiementClient({
   const [journalId, setJournalId] = useState(journaux[0]?.id ?? "");
   const [compte, setCompte] = useState(comptesTresorerie[0]?.numero ?? "");
   const [erreur, setErreur] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   /** Soumet le paiement via le Server Action et redirige vers le document facture. */
   async function valider() {
+    if (busy) return;
+    setBusy(true);
     setErreur(null);
     try {
       await enregistrerPaiement({
@@ -48,6 +51,8 @@ export function PaiementClient({
       router.push(`/ventes/factures/${factureId}`);
     } catch (e) {
       setErreur(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -101,7 +106,7 @@ export function PaiementClient({
         <button
           className="btn primary"
           onClick={valider}
-          disabled={!journalId || !compte || montant <= 0}
+          disabled={busy || !journalId || !compte || montant <= 0}
         >
           Encaisser
         </button>

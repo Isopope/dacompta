@@ -14,12 +14,17 @@ export function DocumentClient({ f }: { f: FactureDetail }) {
   const router = useRouter();
   // Message d'erreur affiché en cas d'échec d'une action (valider / extourner / annuler).
   const [erreur, setErreur] = useState<string | null>(null);
+  // Garde double-submit : désactive tous les boutons d'action pendant qu'une action est en cours.
+  const [busy, setBusy] = useState(false);
 
   // Exécute une action serveur, rafraîchit la page après succès, ou affiche l'erreur.
   const run = (fn: (id: string) => Promise<void>) => async () => {
+    if (busy) return;
+    setBusy(true);
     setErreur(null);
     try { await fn(f.id); router.refresh(); }
     catch (e) { setErreur(e instanceof Error ? e.message : "Erreur"); }
+    finally { setBusy(false); }
   };
 
   // Badge de l'état de paiement (Payé / Partiel / Non payé) avec sa variante de couleur.
@@ -29,13 +34,13 @@ export function DocumentClient({ f }: { f: FactureDetail }) {
   const actions = (
     <>
       {/* BROUILLON → peut être validée */}
-      {f.statut === "BROUILLON" && <button className="btn primary" onClick={run(actionValider)}>Valider</button>}
+      {f.statut === "BROUILLON" && <button className="btn primary" onClick={run(actionValider)} disabled={busy}>Valider</button>}
       {/* VALIDEE non soldée → lien vers l'enregistrement d'un paiement (route B8) */}
       {f.statut === "VALIDEE" && f.etatPaiement !== "PAYE" && <a className="btn primary" href={`/ventes/paiements/nouveau?facture=${f.id}`}>Enregistrer un paiement</a>}
       {/* VALIDEE → peut être extournée */}
-      {f.statut === "VALIDEE" && <button className="btn" onClick={run(actionExtourner)}>Extourner</button>}
+      {f.statut === "VALIDEE" && <button className="btn" onClick={run(actionExtourner)} disabled={busy}>Extourner</button>}
       {/* BROUILLON → peut être annulée */}
-      {f.statut === "BROUILLON" && <button className="btn" onClick={run(actionAnnuler)}>Annuler</button>}
+      {f.statut === "BROUILLON" && <button className="btn" onClick={run(actionAnnuler)} disabled={busy}>Annuler</button>}
     </>
   );
 
