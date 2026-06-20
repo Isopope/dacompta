@@ -109,91 +109,101 @@ export async function listerPieces(dossierId: string, filtre: FiltrePieces = {})
   });
 }
 
-export async function validerPiece(id: string) {
-  return prisma.$transaction(async (tx) => {
-    const piece = await tx.piece.findUniqueOrThrow({
-      where: { id },
-      include: {
-        lignes: { orderBy: { ordre: "asc" } },
-        journal: true,
-        dossier: true,
-      },
-    });
+// Noyau de validation réutilisable à l'intérieur d'une transaction Prisma existante.
+// Prisma ne supporte pas les transactions interactives imbriquées ; on extrait donc
+// la logique dans ce helper pour permettre à extournerPiece de créer le brouillon
+// ET de le valider dans une seule transaction atomique.
+async function validerPieceTx(tx: Prisma.TransactionClient, id: string) {
+  const piece = await tx.piece.findUniqueOrThrow({
+    where: { id },
+    include: {
+      lignes: { orderBy: { ordre: "asc" } },
+      journal: true,
+      dossier: true,
+    },
+  });
 
-    if (piece.statut !== "BROUILLON") {
-      throw new ErreurIntegrite("Seule une pièce BROUILLON peut être validée.");
-    }
+  if (piece.statut !== "BROUILLON") {
+    throw new ErreurIntegrite("Seule une pièce BROUILLON peut être validée.");
+  }
 
-    verifierPieceNonVide(piece.lignes);
-    verifierEquilibre(piece.lignes, piece.dossier.devise);
+  verifierPieceNonVide(piece.lignes);
+  verifierEquilibre(piece.lignes, piece.dossier.devise);
 
-    const exercice = piece.datePiece.getFullYear();
+  const exercice = piece.datePiece.getFullYear();
 
-    // Compteur (dossier, journal, exercice) — incrément atomique dans la transaction.
-    const seq = await tx.sequencePiece.upsert({
-      where: {
-        dossierId_journalId_exercice: {
-          dossierId: piece.dossierId,
-          journalId: piece.journalId,
-          exercice,
-        },
-      },
-      update: { dernierNumero: { increment: 1 } },
-      create: {
+  // Compteur (dossier, journal, exercice) — incrément atomique dans la transaction.
+  const seq = await tx.sequencePiece.upsert({
+    where: {
+      dossierId_journalId_exercice: {
         dossierId: piece.dossierId,
         journalId: piece.journalId,
         exercice,
-        dernierNumero: 1,
       },
-    });
+    },
+    update: { dernierNumero: { increment: 1 } },
+    create: {
+      dossierId: piece.dossierId,
+      journalId: piece.journalId,
+      exercice,
+      dernierNumero: 1,
+    },
+  });
 
-    const numeroPiece = `${piece.journal.code}/${exercice}/${String(seq.dernierNumero).padStart(4, "0")}`;
+  const numeroPiece = `${piece.journal.code}/${exercice}/${String(seq.dernierNumero).padStart(4, "0")}`;
 
-    // Hash chaîné : dernière pièce validée du même (journal, exercice).
-    const precedente = await tx.piece.findFirst({
-      where: {
-        dossierId: piece.dossierId,
-        journalId: piece.journalId,
-        exercice,
-        statut: "VALIDEE",
-      },
-      orderBy: { dateValidation: "desc" },
-      select: { hash: true },
-    });
+  // Hash chaîné : prédécesseur immédiat dans la séquence du même (journal, exercice).
+  // La chaîne est ordonnée par numéro de séquence (numeroPiece asc) — la vérification
+  // (audit-chaine) utilise le même ordre ; construction et vérification doivent coïncider.
+  const precedente = await tx.piece.findFirst({
+    where: {
+      dossierId: piece.dossierId,
+      journalId: piece.journalId,
+      exercice,
+      statut: "VALIDEE",
+    },
+    orderBy: { numeroPiece: "desc" },
+    select: { hash: true },
+  });
 
-    const hashPrecedent = precedente?.hash ?? null;
-    const hash = calculerHash(
-      {
-        dossierId: piece.dossierId,
-        journalId: piece.journalId,
-        datePieceISO: piece.datePiece.toISOString(),
-        exercice,
-        numeroPiece,
-        lignes: piece.lignes.map((l) => ({
-          compteNumero: l.compteNumero,
-          debit: l.debit.toString(),
-          credit: l.credit.toString(),
-          ordre: l.ordre,
-        })),
-      },
+  const hashPrecedent = precedente?.hash ?? null;
+  const hash = calculerHash(
+    {
+      dossierId: piece.dossierId,
+      journalId: piece.journalId,
+      datePieceISO: piece.datePiece.toISOString(),
+      exercice,
+      numeroPiece,
+      lignes: piece.lignes.map((l) => ({
+        compteNumero: l.compteNumero,
+        debit: l.debit.toString(),
+        credit: l.credit.toString(),
+        ordre: l.ordre,
+      })),
+    },
+    hashPrecedent,
+  );
+
+  return tx.piece.update({
+    where: { id },
+    data: {
+      statut: "VALIDEE",
+      numeroPiece,
+      exercice,
+      dateValidation: new Date(),
+      hash,
       hashPrecedent,
-    );
-
-    return tx.piece.update({
-      where: { id },
-      data: {
-        statut: "VALIDEE",
-        numeroPiece,
-        exercice,
-        dateValidation: new Date(),
-        hash,
-        hashPrecedent,
-      },
-    });
+    },
   });
 }
 
+export async function validerPiece(id: string) {
+  return prisma.$transaction((tx) => validerPieceTx(tx, id));
+}
+
 export async function extournerPiece(id: string, dateExtourne?: Date) {
+  // Pré-vérifications (lecture seule, hors transaction) :
+  // refus si la pièce n'est pas VALIDEE ou si elle est déjà extournée.
   const origine = await prisma.piece.findUniqueOrThrow({
     where: { id },
     include: { lignes: { orderBy: { ordre: "asc" } } },
@@ -211,33 +221,39 @@ export async function extournerPiece(id: string, dateExtourne?: Date) {
     throw new ErreurIntegrite("Pièce déjà extournée.");
   }
 
-  // Brouillon inverse (debit ↔ credit), même journal, daté du jour par défaut.
-  const brouillon = await prisma.piece.create({
-    data: {
-      numeroPiece: `EXT-${origine.id.slice(0, 8)}`,
-      datePiece: dateExtourne ?? new Date(),
-      journalId: origine.journalId,
-      dossierId: origine.dossierId,
-      extourneDeId: origine.id,
-      montantHT: origine.montantHT.negated(),
-      montantTVA: origine.montantTVA.negated(),
-      montantTTC: origine.montantTTC.negated(),
-      lignes: {
-        create: origine.lignes.map((l) => ({
-          compteId: l.compteId,
-          compteNumero: l.compteNumero,
-          libelleLigne: `Extourne — ${l.libelleLigne}`,
-          debit: l.credit,
-          credit: l.debit,
-          ordre: l.ordre,
-          amountResidual: new Prisma.Decimal(l.credit.minus(l.debit).abs().toString()),
-          isLettres: false,
-        })),
+  // Création du brouillon inverse ET sa validation dans une seule transaction atomique.
+  // Si la validation échoue, le brouillon n'est pas persisté — aucun EXT- BROUILLON
+  // orphelin ne peut bloquer une future extourne.
+  return prisma.$transaction(async (tx) => {
+    // Brouillon inverse (debit ↔ credit), même journal, daté du jour par défaut.
+    const brouillon = await tx.piece.create({
+      data: {
+        numeroPiece: `EXT-${origine.id.slice(0, 8)}`,
+        datePiece: dateExtourne ?? new Date(),
+        journalId: origine.journalId,
+        dossierId: origine.dossierId,
+        extourneDeId: origine.id,
+        montantHT: origine.montantHT.negated(),
+        montantTVA: origine.montantTVA.negated(),
+        montantTTC: origine.montantTTC.negated(),
+        lignes: {
+          create: origine.lignes.map((l) => ({
+            compteId: l.compteId,
+            compteNumero: l.compteNumero,
+            libelleLigne: `Extourne — ${l.libelleLigne}`,
+            debit: l.credit,
+            credit: l.debit,
+            ordre: l.ordre,
+            amountResidual: new Prisma.Decimal(l.credit.minus(l.debit).abs().toString()),
+            isLettres: false,
+          })),
+        },
       },
-    },
-  });
+    });
 
-  return validerPiece(brouillon.id); // l'extourne reçoit son propre numéro + hash
+    // Validation atomique : l'extourne reçoit son propre numéro de séquence + hash chaîné.
+    return validerPieceTx(tx, brouillon.id);
+  });
 }
 
 export async function annulerPiece(id: string) {
