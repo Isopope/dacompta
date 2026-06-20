@@ -1,35 +1,35 @@
-import { prisma } from "@/lib/db";
-import { getBalance, getGrandLivre } from "@/server/balance";
-import { deriverBilan, deriverCompteResultat, deriverFluxTresorerie } from "@/lib/etats/etats-financiers";
-import EtatsClient from "./EtatsClient";
+// Page États — Déclaration TVA (T1 placeholder)
+// Agrège la TVA collectée et déductible depuis les écritures du dossier courant.
+import { Shell } from "@/components/Shell";
+import { getDossierIdCookie } from "@/lib/dossier-context";
+import { getDeclarationTVA } from "@/server/taxes";
 
-// États déduits d'une base vivante : rendu dynamique, jamais figé au build.
-export const dynamic = "force-dynamic";
-
-export default async function EtatsPage() {
-  const dossier = await prisma.dossier.findFirstOrThrow();
-  const [balance, grandLivre] = await Promise.all([
-    getBalance(dossier.id),
-    getGrandLivre(dossier.id),
-  ]);
-  const bilan = deriverBilan(balance);
-  const compteResultat = deriverCompteResultat(balance);
-  const fluxTresorerie = deriverFluxTresorerie(balance, grandLivre);
+export default async function Page() {
+  // Lecture du dossier courant depuis le cookie
+  const dossierId = await getDossierIdCookie();
+  // Si aucun dossier sélectionné, on renvoie des zéros (Shell affichera l'invite de sélection)
+  const tva = dossierId
+    ? await getDeclarationTVA(dossierId)
+    : { collectee: 0, deductible: 0, netteDue: 0 };
 
   return (
-    <div className="container" style={{ maxWidth: 1280 }}>
-      <h1>États & documents — {dossier.nom}</h1>
-      <p className="muted">
-        {dossier.ville}, {dossier.pays} · {dossier.devise} · exercice {dossier.exercice} · Rien à
-        fabriquer — tout vient des écritures.
-      </p>
-      <EtatsClient
-        balance={balance}
-        grandLivre={grandLivre}
-        bilan={bilan}
-        compteResultat={compteResultat}
-        fluxTresorerie={fluxTresorerie}
-      />
-    </div>
+    <Shell module="etats" breadcrumb={[{ label: "États" }, { label: "Déclaration TVA" }]}>
+      <div className="panel" style={{ padding: 16, maxWidth: 420 }}>
+        <h3>Déclaration de TVA</h3>
+        {/* Montants formatés selon la locale française */}
+        <p>
+          TVA collectée :{" "}
+          <strong className="mono">{tva.collectee.toLocaleString("fr-FR")}</strong>
+        </p>
+        <p>
+          TVA déductible :{" "}
+          <strong className="mono">{tva.deductible.toLocaleString("fr-FR")}</strong>
+        </p>
+        <p>
+          TVA nette due :{" "}
+          <strong className="mono">{tva.netteDue.toLocaleString("fr-FR")}</strong>
+        </p>
+      </div>
+    </Shell>
   );
 }
