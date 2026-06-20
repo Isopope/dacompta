@@ -91,6 +91,51 @@ export async function getFacture(dossierId: string, id: string): Promise<Facture
   };
 }
 
+// ── Paiements ────────────────────────────────────────────────────────────────
+
+/** Élément de liste d'un paiement enregistré (encaissement / décaissement). */
+export interface PaiementListItem {
+  id: string;
+  numeroPiece: string;
+  date: string;
+  tiersNom: string | null;
+  montant: number;
+  sens: string;
+}
+
+/**
+ * Retourne la liste des paiements d'un dossier, triés du plus récent au plus ancien.
+ * Filtre optionnel par tiers.
+ *
+ * Schéma vérifié : Paiement.tiers → Tiers.nom ; Paiement.piece → Piece.numeroPiece.
+ * Les deux relations existent dans schema.prisma (PaiementPiece + Tiers).
+ */
+export async function listerPaiements(
+  dossierId: string,
+  filtre: { tiersId?: string } = {},
+): Promise<PaiementListItem[]> {
+  const ps = await prisma.paiement.findMany({
+    where: {
+      dossierId,
+      ...(filtre.tiersId ? { tiersId: filtre.tiersId } : {}),
+    },
+    include: {
+      tiers: { select: { nom: true } },
+      piece: { select: { numeroPiece: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return ps.map((p) => ({
+    id: p.id,
+    numeroPiece: p.piece?.numeroPiece ?? "—",
+    date: p.datePaiement.toISOString(),
+    tiersNom: p.tiers?.nom ?? null,
+    montant: Number(p.montant),
+    sens: p.sens,
+  }));
+}
+
 /** Factures clients = pièces des journaux de vente (journal.type = "sale"). */
 export async function listerFactures(
   dossierId: string,
