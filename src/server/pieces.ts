@@ -194,17 +194,16 @@ export async function validerPiece(id: string) {
 }
 
 export async function annulerPiece(id: string) {
-  // Une pièce validée est immuable : seule l'extourne peut la corriger.
-  const cible = await prisma.piece.findUniqueOrThrow({ where: { id }, select: { statut: true } });
-  if (cible.statut === "VALIDEE") {
-    throw new ErreurIntegrite("Une pièce validée est immuable : utilisez l'extourne.");
-  }
-
   // Annuler une pièce lettrée doit d'abord défaire ses lettrages : sinon le
   // résiduel des lignes en face resterait diminué alors que la contrepartie
   // disparaît des soldes. (Odoo interdit de toucher une ligne rapprochée sans
   // casser d'abord le rapprochement ; ici on casse automatiquement.)
   return prisma.$transaction(async (tx) => {
+    // Une pièce validée est immuable : seule l'extourne peut la corriger.
+    const cible = await tx.piece.findUniqueOrThrow({ where: { id }, select: { statut: true } });
+    if (cible.statut === "VALIDEE") {
+      throw new ErreurIntegrite("Une pièce validée est immuable : utilisez l'extourne.");
+    }
     const lignes = await tx.ligneEcriture.findMany({ where: { pieceId: id }, select: { id: true } });
     const ligneIds = lignes.map((l) => l.id);
 
