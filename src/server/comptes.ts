@@ -57,5 +57,8 @@ export async function modifierCompte(id: string, data: { intitule?: string; type
 }
 
 export async function archiverCompte(id: string) {
+  const compte = await prisma.compte.findUniqueOrThrow({ where: { id }, select: { id: true } });
+  const nb = await prisma.ligneEcriture.count({ where: { compteId: compte.id } });
+  if (nb > 0) throw new Error("Impossible d'archiver un compte ayant des écritures (mouvement existant).");
   return prisma.compte.update({ where: { id }, data: { statut: "ARCHIVE" } });
 }
