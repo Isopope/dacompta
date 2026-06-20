@@ -219,6 +219,9 @@ export async function extournerPiece(id: string, dateExtourne?: Date) {
       journalId: origine.journalId,
       dossierId: origine.dossierId,
       extourneDeId: origine.id,
+      montantHT: origine.montantHT.negated(),
+      montantTVA: origine.montantTVA.negated(),
+      montantTTC: origine.montantTTC.negated(),
       lignes: {
         create: origine.lignes.map((l) => ({
           compteId: l.compteId,
