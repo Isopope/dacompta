@@ -57,19 +57,21 @@ export async function preVolMigration(dossierId: string): Promise<Anomalie[]> {
     where: { dossierId },
     select: { compteNumero: true },
   });
-  for (const s of soldes) {
-    if (!comptesExistants.has(s.compteNumero)) {
-      // seulement si pas encore signalé via lignes
-      if (!anomalies.some((a) => a.type === "COMPTE_ORPHELIN" && a.compteNumero === s.compteNumero)) {
-        anomalies.push({ type: "COMPTE_ORPHELIN", compteNumero: s.compteNumero });
-      }
-    }
-  }
 
+  // Collecter tous les compteNumero orphelins (lignes + soldes) dans un Set pour déduplication
+  const orphelins = new Set<string>();
   for (const n of numeros) {
     if (!comptesExistants.has(n)) {
-      anomalies.push({ type: "COMPTE_ORPHELIN", compteNumero: n });
+      orphelins.add(n);
     }
+  }
+  for (const s of soldes) {
+    if (!comptesExistants.has(s.compteNumero)) {
+      orphelins.add(s.compteNumero);
+    }
+  }
+  for (const compteNumero of orphelins) {
+    anomalies.push({ type: "COMPTE_ORPHELIN", compteNumero });
   }
 
   // ─── 2. Ligne débit ET crédit simultanément ─────────────────────────────
@@ -175,6 +177,7 @@ export async function executerMigration(
       },
       orderBy: [
         { journalId: "asc" },
+        { exercice: "asc" },
         { datePiece: "asc" },
         { createdAt: "asc" },
       ],
@@ -273,8 +276,10 @@ export async function executerMigration(
   const apres = await getBalance(dossierId);
 
   const balanceIdentique =
-    Math.abs(apres.totaux.debit - avant.totaux.debit) < 0.01 &&
-    Math.abs(apres.totaux.credit - avant.totaux.credit) < 0.01;
+    avant.totaux.debit === apres.totaux.debit &&
+    avant.totaux.credit === apres.totaux.credit &&
+    avant.totaux.soldeDebiteur === apres.totaux.soldeDebiteur &&
+    avant.totaux.soldeCrediteur === apres.totaux.soldeCrediteur;
 
   if (!balanceIdentique) {
     throw new Error(

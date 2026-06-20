@@ -96,6 +96,10 @@ describe("migration fail-fast", () => {
     expect(anomalies.some((a) => a.type === "PIECE_DESEQUILIBREE")).toBe(true);
 
     await expect(executerMigration(dossierId)).rejects.toThrow(/pré-vol|anomalie/i);
+
+    // Garantie "no writes on abort" : la pièce insérée ne doit pas avoir été modifiée
+    const pieceApres = await prisma.piece.findUniqueOrThrow({ where: { id: piece.id } });
+    expect(pieceApres.numeroPiece).toBe("ACH/2020/DESES");
   });
 
   it("sur base saine : balance identique avant/après + idempotent", async () => {
