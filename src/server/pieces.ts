@@ -193,6 +193,50 @@ export async function validerPiece(id: string) {
   });
 }
 
+export async function extournerPiece(id: string, dateExtourne?: Date) {
+  const origine = await prisma.piece.findUniqueOrThrow({
+    where: { id },
+    include: { lignes: { orderBy: { ordre: "asc" } } },
+  });
+
+  if (origine.statut !== "VALIDEE") {
+    throw new ErreurIntegrite("Seule une pièce validée peut être extournée.");
+  }
+
+  const dejaExtournee = await prisma.piece.findFirst({
+    where: { extourneDeId: id },
+    select: { id: true },
+  });
+  if (dejaExtournee) {
+    throw new ErreurIntegrite("Pièce déjà extournée.");
+  }
+
+  // Brouillon inverse (debit ↔ credit), même journal, daté du jour par défaut.
+  const brouillon = await prisma.piece.create({
+    data: {
+      numeroPiece: `EXT-${origine.id.slice(0, 8)}`,
+      datePiece: dateExtourne ?? new Date(),
+      journalId: origine.journalId,
+      dossierId: origine.dossierId,
+      extourneDeId: origine.id,
+      lignes: {
+        create: origine.lignes.map((l) => ({
+          compteId: l.compteId,
+          compteNumero: l.compteNumero,
+          libelleLigne: `Extourne — ${l.libelleLigne}`,
+          debit: l.credit,
+          credit: l.debit,
+          ordre: l.ordre,
+          amountResidual: new Prisma.Decimal(l.credit.minus(l.debit).abs().toString()),
+          isLettres: false,
+        })),
+      },
+    },
+  });
+
+  return validerPiece(brouillon.id); // l'extourne reçoit son propre numéro + hash
+}
+
 export async function annulerPiece(id: string) {
   // Annuler une pièce lettrée doit d'abord défaire ses lettrages : sinon le
   // résiduel des lignes en face resterait diminué alors que la contrepartie
