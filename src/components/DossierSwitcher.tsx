@@ -16,8 +16,12 @@ export function DossierSwitcher({
       className="input"
       value={courantId ?? ""}
       onChange={async (e) => {
-        await choisirDossier(e.target.value);
-        router.refresh();
+        try {
+          await choisirDossier(e.target.value);
+          router.refresh();
+        } catch (err) {
+          console.error("Échec du changement de dossier :", err);
+        }
       }}
     >
       {!courantId && <option value="">— choisir un dossier —</option>}
