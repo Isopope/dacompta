@@ -100,7 +100,9 @@ describe("listerPieces", () => {
 
     const validees = await listerPieces(dossierId, { statut: "VALIDEE" });
     expect(validees).toHaveLength(1);
-    expect(validees[0].numeroPiece).toBe("ACH-010");
+    // numeroPiece is now assigned by the sequence: CODE/EXERCICE/NNNN.
+    expect(validees[0].id).toBe(a.id);
+    expect(validees[0].numeroPiece).toMatch(/^ACH\/\d{4}\/0001$/);
   });
 });
 

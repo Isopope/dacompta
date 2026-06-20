@@ -2,7 +2,7 @@
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { verifierEquilibre, verifierPieceNonVide, verifierSignesLigne } from "@/lib/comptabilite/integrite";
+import { verifierEquilibre, verifierPieceNonVide, verifierSignesLigne, calculerHash, ErreurIntegrite } from "@/lib/comptabilite/integrite";
 
 export interface LignePieceInput {
   compteNumero: string;
@@ -110,10 +110,96 @@ export async function listerPieces(dossierId: string, filtre: FiltrePieces = {})
 }
 
 export async function validerPiece(id: string) {
-  return prisma.piece.update({ where: { id }, data: { statut: "VALIDEE" } });
+  return prisma.$transaction(async (tx) => {
+    const piece = await tx.piece.findUniqueOrThrow({
+      where: { id },
+      include: {
+        lignes: { orderBy: { ordre: "asc" } },
+        journal: true,
+        dossier: true,
+      },
+    });
+
+    if (piece.statut !== "BROUILLON") {
+      throw new ErreurIntegrite("Seule une pièce BROUILLON peut être validée.");
+    }
+
+    verifierPieceNonVide(piece.lignes);
+    verifierEquilibre(piece.lignes, piece.dossier.devise);
+
+    const exercice = piece.datePiece.getFullYear();
+
+    // Compteur (dossier, journal, exercice) — incrément atomique dans la transaction.
+    const seq = await tx.sequencePiece.upsert({
+      where: {
+        dossierId_journalId_exercice: {
+          dossierId: piece.dossierId,
+          journalId: piece.journalId,
+          exercice,
+        },
+      },
+      update: { dernierNumero: { increment: 1 } },
+      create: {
+        dossierId: piece.dossierId,
+        journalId: piece.journalId,
+        exercice,
+        dernierNumero: 1,
+      },
+    });
+
+    const numeroPiece = `${piece.journal.code}/${exercice}/${String(seq.dernierNumero).padStart(4, "0")}`;
+
+    // Hash chaîné : dernière pièce validée du même (journal, exercice).
+    const precedente = await tx.piece.findFirst({
+      where: {
+        dossierId: piece.dossierId,
+        journalId: piece.journalId,
+        exercice,
+        statut: "VALIDEE",
+      },
+      orderBy: { dateValidation: "desc" },
+      select: { hash: true },
+    });
+
+    const hashPrecedent = precedente?.hash ?? null;
+    const hash = calculerHash(
+      {
+        dossierId: piece.dossierId,
+        journalId: piece.journalId,
+        datePieceISO: piece.datePiece.toISOString(),
+        exercice,
+        numeroPiece,
+        lignes: piece.lignes.map((l) => ({
+          compteNumero: l.compteNumero,
+          debit: l.debit.toString(),
+          credit: l.credit.toString(),
+          ordre: l.ordre,
+        })),
+      },
+      hashPrecedent,
+    );
+
+    return tx.piece.update({
+      where: { id },
+      data: {
+        statut: "VALIDEE",
+        numeroPiece,
+        exercice,
+        dateValidation: new Date(),
+        hash,
+        hashPrecedent,
+      },
+    });
+  });
 }
 
 export async function annulerPiece(id: string) {
+  // Une pièce validée est immuable : seule l'extourne peut la corriger.
+  const cible = await prisma.piece.findUniqueOrThrow({ where: { id }, select: { statut: true } });
+  if (cible.statut === "VALIDEE") {
+    throw new ErreurIntegrite("Une pièce validée est immuable : utilisez l'extourne.");
+  }
+
   // Annuler une pièce lettrée doit d'abord défaire ses lettrages : sinon le
   // résiduel des lignes en face resterait diminué alors que la contrepartie
   // disparaît des soldes. (Odoo interdit de toucher une ligne rapprochée sans
