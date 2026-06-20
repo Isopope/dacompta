@@ -60,12 +60,14 @@ Ne PAS mettre de Prisma calls dans les composants client. Passer par les server 
 - TDD obligatoire : tests Vitest `*.test.ts` dans `src/server/` ou `src/lib/`.
 
 ### Seed de dev
-Prisma seed crée un dossier "Les Associés SA" (Lomé, Togo) avec :
-- 16 comptes, 4 écritures, RAN
-- Capital 50M FCFA, Emprunt 15M, Report-à-nouveau -6M
-- Immobilisation 54M, Trésorerie ~9,6M
-- 5 journaux (ACH, VT, CAI, OD, RAN)
-- Postes budgétaires (carburant, eau, loyer, transport, honoraires, vente marchandises)
+Prisma seed crée :
+- Le référentiel SYSCOHADA révisé (classes + natures)
+- Un dossier "Les Associés SA" (Lomé, Togo, XOF, exercice 2020)
+- 7 journaux (ACH, VT, CAI, BIMA, OD, PE, RAN)
+- Les comptes du plan COMPTES_LES_ASSOCIES (définis dans `src/lib/syscohada/referentiel.ts`)
+- 15 postes budgétaires (transport, vente, achats, carburant, personnel, etc.)
+- 4 soldes N-1 (exercice 2019) pour les comptes de gestion (706100, 601100, 605300, 661100)
+- **Aucune pièce ni écriture** — les pièces sont créées uniquement par les tests ou via l'interface.
 
 ## Tests
 ```bash
