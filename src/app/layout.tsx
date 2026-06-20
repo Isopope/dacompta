@@ -1,3 +1,4 @@
+// Layout racine minimal — la navigation est gérée par <Shell> dans chaque page de module
 import "./globals.css";
 import type { ReactNode } from "react";
 
@@ -6,18 +7,7 @@ export const metadata = { title: "DaCompta" };
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="fr">
-      <body>
-        <nav style={{ display: "flex", gap: 20, padding: "12px 24px", borderBottom: "2px solid var(--line)", background: "var(--panel)", alignItems: "center" }}>
-          <a href="/" style={{ fontWeight: 700, fontFamily: "'Space Mono', monospace", color: "inherit", textDecoration: "none" }}>DaCompta</a>
-          <a href="/" style={{ color: "inherit", textDecoration: "none" }}>Tableau de bord</a>
-          <a href="/plan-comptable" style={{ color: "inherit", textDecoration: "none" }}>Plan comptable</a>
-          <a href="/ecritures" style={{ color: "inherit", textDecoration: "none" }}>Écritures</a>
-          <a href="/lettrage" style={{ color: "inherit", textDecoration: "none" }}>Lettrage</a>
-          <a href="/budget" style={{ color: "inherit", textDecoration: "none" }}>Budget</a>
-          <a href="/etats" style={{ color: "inherit", textDecoration: "none" }}>États & documents</a>
-        </nav>
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
