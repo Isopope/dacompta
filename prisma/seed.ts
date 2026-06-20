@@ -40,19 +40,19 @@ async function main() {
     }));
 
   const JOURNAUX = [
-    { code: "ACH", libelle: "Achats" },
-    { code: "VT", libelle: "Ventes" },
-    { code: "CAI", libelle: "Caisse" },
-    { code: "BIMA", libelle: "Banque" },
-    { code: "OD", libelle: "Opérations diverses" },
-    { code: "PE", libelle: "Paie" },
-    { code: "RAN", libelle: "Report à nouveau" },
+    { code: "ACH", libelle: "Achats", type: "purchase" },
+    { code: "VT", libelle: "Ventes", type: "sale" },
+    { code: "CAI", libelle: "Caisse", type: "cash" },
+    { code: "BIMA", libelle: "Banque", type: "bank" },
+    { code: "OD", libelle: "Opérations diverses", type: "misc" },
+    { code: "PE", libelle: "Paie", type: "misc" },
+    { code: "RAN", libelle: "Report à nouveau", type: "misc" },
   ];
   for (const j of JOURNAUX) {
     await prisma.journal.upsert({
       where: { dossierId_code: { dossierId: dossier.id, code: j.code } },
-      update: { libelle: j.libelle },
-      create: { code: j.code, libelle: j.libelle, dossierId: dossier.id },
+      update: { libelle: j.libelle, type: j.type },
+      create: { code: j.code, libelle: j.libelle, type: j.type, dossierId: dossier.id },
     });
   }
 

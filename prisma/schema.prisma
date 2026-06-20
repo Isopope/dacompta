@@ -181,6 +181,7 @@ model Journal {
   id        String  @id @default(cuid())
   code      String // ACH | VT | CAI | BIMA | OD | PE | RAN
   libelle   String
+  type      String  @default("misc") // sale | purchase | cash | bank | misc
   dossier   Dossier @relation(fields: [dossierId], references: [id])
   dossierId String
   pieces    Piece[]
