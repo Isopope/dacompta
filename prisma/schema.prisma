@@ -45,6 +45,11 @@ model Dossier {
   pays             String
   devise           String
   exercice         Int
+  // Verrous de période façon Odoo : soft lock (réversible) et hard lock
+  // (irréversible — clôture définitive). Interdisent toute écriture dont la date
+  // est antérieure ou égale au verrou.
+  fiscalyearLockDate DateTime?
+  hardLockDate       DateTime?
   referentiel      Referentiel      @relation(fields: [referentielId], references: [id])
   referentielId    String
   comptes          Compte[]
@@ -55,6 +60,83 @@ model Dossier {
   soldesAnterieurs SoldeAnterieur[]
   lettrages        Lettrage[]
   reglesLettrage   RegleLettrage[]
+  tiers            Tiers[]
+  taxes            Taxe[]
+  paiements        Paiement[]
+  auditLogs        AuditLog[]
+}
+
+// Journal d'audit (équivalent piste d'audit / mail.thread d'Odoo) : trace les
+// opérations sensibles (validation, annulation, extourne, verrou) de façon append-only.
+model AuditLog {
+  id        String   @id @default(cuid())
+  dossier   Dossier  @relation(fields: [dossierId], references: [id])
+  dossierId String
+  type      String // CREATION | VALIDATION | ANNULATION | EXTOURNE | VERROU
+  pieceId   String?
+  message   String
+  createdAt DateTime @default(now())
+
+  @@index([dossierId])
+}
+
+// Paiement (équivalent account.payment d'Odoo). Génère une pièce de trésorerie
+// équilibrée et se lettre automatiquement contre les factures du tiers.
+model Paiement {
+  id           String   @id @default(cuid())
+  dossier      Dossier  @relation(fields: [dossierId], references: [id])
+  dossierId    String
+  tiers        Tiers    @relation(fields: [tiersId], references: [id], onDelete: Restrict)
+  tiersId      String
+  pieceId      String?  @unique
+  piece        Piece?   @relation("PaiementPiece", fields: [pieceId], references: [id])
+  sens         String // ENTRANT (encaissement client) | SORTANT (décaissement fournisseur)
+  montant      Decimal  @default(0)
+  datePaiement DateTime
+  etat         String   @default("posted") // draft | posted
+  createdAt    DateTime @default(now())
+
+  @@index([dossierId])
+}
+
+// Taxe (équivalent account.tax d'Odoo). Mono-taux. `usage` = type_tax_use
+// (sale/purchase) ; `exigibilite` = tax_exigibility (sur facture / sur encaissement).
+model Taxe {
+  id           String          @id @default(cuid())
+  dossier      Dossier         @relation(fields: [dossierId], references: [id])
+  dossierId    String
+  code         String // ex. "TVA18", "TVA18-ACH"
+  nom          String
+  taux         Decimal         @default(0) // pourcentage, ou montant fixe si typeAmount=fixed
+  typeAmount   String          @default("percent") // percent | fixed
+  usage        String // sale | purchase
+  priceInclude Boolean         @default(false)
+  exigibilite  String          @default("sur_facture") // sur_facture | sur_encaissement
+  compteNumero String // compte de TVA (443x collectée / 445x déductible)
+  active       Boolean         @default(true)
+  lignes       LigneEcriture[]
+  createdAt    DateTime        @default(now())
+
+  @@unique([dossierId, code])
+  @@index([dossierId])
+}
+
+// Tiers (équivalent res.partner d'Odoo) : client/fournisseur rattaché à un dossier,
+// porteur d'un code auxiliaire. Le lettrage et le grand-livre auxiliaire se font
+// par (compte collectif, tiers).
+model Tiers {
+  id        String          @id @default(cuid())
+  dossier   Dossier         @relation(fields: [dossierId], references: [id])
+  dossierId String
+  code      String // code auxiliaire (ex. "C001", "F042")
+  nom       String
+  type      String // CLIENT | FOURNISSEUR | AUTRE
+  lignes    LigneEcriture[]
+  paiements Paiement[]
+  createdAt DateTime        @default(now())
+
+  @@unique([dossierId, code])
+  @@index([dossierId])
 }
 
 model Compte {
@@ -66,6 +148,12 @@ model Compte {
   natureRacine     String?
   reportNplus1     Boolean
   collectif        Boolean          @default(false)
+  // Type de compte façon Odoo account_type (asset_receivable, liability_payable,
+  // asset_cash, equity, income, expense…). Porte le comportement comptable.
+  accountType      String           @default("off_balance")
+  // Réconciliable (Odoo account.reconcile) : seuls les comptes réconciliables
+  // peuvent être lettrés. Vrai par défaut pour receivable/payable.
+  reconciliable    Boolean          @default(false)
   statut           String           @default("ACTIF") // ACTIF | ARCHIVE
   dossier          Dossier          @relation(fields: [dossierId], references: [id])
   dossierId        String
@@ -123,6 +211,7 @@ model Piece {
   extourneDeId    String?
   extourneDe      Piece?          @relation("Extourne", fields: [extourneDeId], references: [id])
   extournes       Piece[]         @relation("Extourne")
+  paiement        Paiement?       @relation("PaiementPiece")
 
   @@unique([dossierId, numeroPiece])
 }
@@ -166,10 +255,21 @@ model LigneEcriture {
   libelleLigne      String
   debit             Decimal @default(0)
   credit            Decimal @default(0)
+  // Solde signé (debit − credit), source unique façon Odoo (account.move.line.balance).
+  // Peuplé par le code applicatif à la création (debit/credit sont immuables ensuite).
+  balance           Decimal @default(0)
   ordre             Int
   sectionAnalytique String? // section analytique optionnelle
   compteId          String
   compte            Compte  @relation(fields: [compteId], references: [id], onDelete: Restrict)
+  // Tiers (auxiliaire) — requis sur les lignes de comptes collectifs (401/411…),
+  // null sinon. Équivalent partner_id d'Odoo.
+  tiersId           String?
+  tiers             Tiers?  @relation(fields: [tiersId], references: [id], onDelete: Restrict)
+  // Taxe ayant généré cette ligne de taxe (équivalent tax_line_id d'Odoo). Null
+  // pour les lignes ordinaires.
+  taxeId            String?
+  taxe              Taxe?   @relation(fields: [taxeId], references: [id], onDelete: Restrict)
 
   // Lettrage (inspiré d'Odoo amount_residual). amountResidual = montant restant
   // à lettrer sur la ligne, en valeur absolue (initialisé à |débit − crédit|).

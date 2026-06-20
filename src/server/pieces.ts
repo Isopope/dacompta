@@ -2,7 +2,8 @@
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { verifierEquilibre, verifierPieceNonVide, verifierSignesLigne, calculerHash, ErreurIntegrite } from "@/lib/comptabilite/integrite";
+import { verifierEquilibre, verifierPieceNonVide, verifierSignesLigne, calculerHash, ErreurIntegrite, verifierDateNonVerrouillee } from "@/lib/comptabilite/integrite";
+import { arrondiDevise, estNulDevise } from "@/lib/comptabilite/devise";
 
 export interface LignePieceInput {
   compteNumero: string;
@@ -10,6 +11,8 @@ export interface LignePieceInput {
   debit: number;
   credit: number;
   sectionAnalytique?: string;
+  tiersId?: string;
+  taxeId?: string;
 }
 
 export interface CreerPieceInput {
@@ -26,12 +29,15 @@ const D = (n: number) => new Prisma.Decimal(n);
 export async function creerPiece(input: CreerPieceInput) {
   const lignes = input.lignes ?? [];
 
-  // Devise du dossier (pour l'arrondi des invariants).
+  // Devise + verrous de période du dossier.
   const dossier = await prisma.dossier.findUniqueOrThrow({
-    where: { id: input.dossierId }, select: { devise: true },
+    where: { id: input.dossierId },
+    select: { devise: true, fiscalyearLockDate: true, hardLockDate: true },
   });
+  const datePiece = input.datePiece ?? new Date();
 
   // Invariants métier (lèvent ErreurIntegrite sinon).
+  verifierDateNonVerrouillee(datePiece, dossier);
   verifierPieceNonVide(lignes);
   for (const l of lignes) verifierSignesLigne(l);
   verifierEquilibre(lignes, dossier.devise);
@@ -39,12 +45,28 @@ export async function creerPiece(input: CreerPieceInput) {
   // Résolution stricte des comptes → compteId (FK).
   const comptes = await prisma.compte.findMany({
     where: { dossierId: input.dossierId, numero: { in: lignes.map((l) => l.compteNumero) } },
-    select: { id: true, numero: true },
+    select: { id: true, numero: true, collectif: true },
   });
-  const parNumero = new Map(comptes.map((c) => [c.numero, c.id]));
+  const parNumero = new Map(comptes.map((c) => [c.numero, c]));
   for (const l of lignes) {
-    if (!parNumero.has(l.compteNumero)) {
+    const compte = parNumero.get(l.compteNumero);
+    if (!compte) {
       throw new Error(`Compte inexistant dans ce dossier : ${l.compteNumero}.`);
+    }
+    // Compte collectif (401/411…) ⇒ tiers obligatoire (grand-livre auxiliaire).
+    if (compte.collectif && !l.tiersId) {
+      throw new ErreurIntegrite(`Le compte collectif ${l.compteNumero} exige un tiers sur la ligne.`);
+    }
+  }
+
+  // Validation des tiers référencés : doivent appartenir au dossier.
+  const tiersIds = [...new Set(lignes.map((l) => l.tiersId).filter((t): t is string => !!t))];
+  if (tiersIds.length) {
+    const trouves = await prisma.tiers.findMany({
+      where: { dossierId: input.dossierId, id: { in: tiersIds } }, select: { id: true },
+    });
+    if (trouves.length !== tiersIds.length) {
+      throw new Error("Tiers inexistant dans ce dossier.");
     }
   }
 
@@ -65,7 +87,7 @@ export async function creerPiece(input: CreerPieceInput) {
   return prisma.piece.create({
     data: {
       numeroPiece: input.numeroPiece,
-      datePiece: input.datePiece ?? new Date(),
+      datePiece,
       fournisseur: input.fournisseur ?? null,
       montantHT,
       montantTVA,
@@ -74,16 +96,20 @@ export async function creerPiece(input: CreerPieceInput) {
       dossierId: input.dossierId,
       lignes: {
         create: lignes.map((l, i) => ({
-          compteId: parNumero.get(l.compteNumero)!,
+          compteId: parNumero.get(l.compteNumero)!.id,
           compteNumero: l.compteNumero,
           libelleLigne: l.libelleLigne,
           debit: D(l.debit),
           credit: D(l.credit),
+          balance: D(l.debit).minus(l.credit),
           ordre: i,
           sectionAnalytique: l.sectionAnalytique ?? null,
+          tiersId: l.tiersId ?? null,
+          taxeId: l.taxeId ?? null,
           // Résiduel de lettrage initialisé au montant de la ligne (|débit − crédit|),
-          // non lettrée par défaut. Le lettrage le fera décroître vers 0.
-          amountResidual: D(Math.abs(l.debit - l.credit)),
+          // arrondi à la précision de la devise, non lettrée par défaut. Le lettrage
+          // le fera décroître vers 0.
+          amountResidual: arrondiDevise(D(l.debit).minus(l.credit).abs(), dossier.devise),
           isLettres: false,
         })),
       },
@@ -127,6 +153,7 @@ async function validerPieceTx(tx: Prisma.TransactionClient, id: string) {
     throw new ErreurIntegrite("Seule une pièce BROUILLON peut être validée.");
   }
 
+  verifierDateNonVerrouillee(piece.datePiece, piece.dossier);
   verifierPieceNonVide(piece.lignes);
   verifierEquilibre(piece.lignes, piece.dossier.devise);
 
@@ -184,7 +211,7 @@ async function validerPieceTx(tx: Prisma.TransactionClient, id: string) {
     hashPrecedent,
   );
 
-  return tx.piece.update({
+  const validee = await tx.piece.update({
     where: { id },
     data: {
       statut: "VALIDEE",
@@ -195,6 +222,10 @@ async function validerPieceTx(tx: Prisma.TransactionClient, id: string) {
       hashPrecedent,
     },
   });
+  await tx.auditLog.create({
+    data: { dossierId: piece.dossierId, type: "VALIDATION", pieceId: id, message: `Pièce ${numeroPiece} validée` },
+  });
+  return validee;
 }
 
 export async function validerPiece(id: string) {
@@ -206,12 +237,13 @@ export async function extournerPiece(id: string, dateExtourne?: Date) {
   // refus si la pièce n'est pas VALIDEE ou si elle est déjà extournée.
   const origine = await prisma.piece.findUniqueOrThrow({
     where: { id },
-    include: { lignes: { orderBy: { ordre: "asc" } } },
+    include: { lignes: { orderBy: { ordre: "asc" } }, dossier: { select: { devise: true } } },
   });
 
   if (origine.statut !== "VALIDEE") {
     throw new ErreurIntegrite("Seule une pièce validée peut être extournée.");
   }
+  const devise = origine.dossier.devise;
 
   const dejaExtournee = await prisma.piece.findFirst({
     where: { extourneDeId: id },
@@ -240,11 +272,13 @@ export async function extournerPiece(id: string, dateExtourne?: Date) {
           create: origine.lignes.map((l) => ({
             compteId: l.compteId,
             compteNumero: l.compteNumero,
+            tiersId: l.tiersId,
             libelleLigne: `Extourne — ${l.libelleLigne}`,
             debit: l.credit,
             credit: l.debit,
+            balance: l.credit.minus(l.debit),
             ordre: l.ordre,
-            amountResidual: new Prisma.Decimal(l.credit.minus(l.debit).abs().toString()),
+            amountResidual: arrondiDevise(l.credit.minus(l.debit).abs(), devise),
             isLettres: false,
           })),
         },
@@ -252,7 +286,14 @@ export async function extournerPiece(id: string, dateExtourne?: Date) {
     });
 
     // Validation atomique : l'extourne reçoit son propre numéro de séquence + hash chaîné.
-    return validerPieceTx(tx, brouillon.id);
+    const extournee = await validerPieceTx(tx, brouillon.id);
+    await tx.auditLog.create({
+      data: {
+        dossierId: origine.dossierId, type: "EXTOURNE", pieceId: extournee.id,
+        message: `Extourne de la pièce ${origine.numeroPiece} → ${extournee.numeroPiece}`,
+      },
+    });
+    return extournee;
   });
 }
 
@@ -263,10 +304,18 @@ export async function annulerPiece(id: string) {
   // casser d'abord le rapprochement ; ici on casse automatiquement.)
   return prisma.$transaction(async (tx) => {
     // Une pièce validée est immuable : seule l'extourne peut la corriger.
-    const cible = await tx.piece.findUniqueOrThrow({ where: { id }, select: { statut: true } });
+    const cible = await tx.piece.findUniqueOrThrow({
+      where: { id },
+      select: {
+        statut: true, datePiece: true,
+        dossier: { select: { devise: true, fiscalyearLockDate: true, hardLockDate: true } },
+      },
+    });
     if (cible.statut === "VALIDEE") {
       throw new ErreurIntegrite("Une pièce validée est immuable : utilisez l'extourne.");
     }
+    verifierDateNonVerrouillee(cible.datePiece, cible.dossier);
+    const devise = cible.dossier.devise;
     const lignes = await tx.ligneEcriture.findMany({ where: { pieceId: id }, select: { id: true } });
     const ligneIds = lignes.map((l) => l.id);
 
@@ -286,15 +335,19 @@ export async function annulerPiece(id: string) {
       }
       for (const [ligneId, montant] of restitution) {
         const ligne = await tx.ligneEcriture.findUniqueOrThrow({ where: { id: ligneId } });
-        const nouveau = Math.round((Number(ligne.amountResidual) + montant) * 100) / 100;
+        const nouveau = arrondiDevise(new Prisma.Decimal(ligne.amountResidual).plus(montant), devise);
         await tx.ligneEcriture.update({
           where: { id: ligneId },
-          data: { amountResidual: D(nouveau), isLettres: nouveau === 0 },
+          data: { amountResidual: nouveau, isLettres: estNulDevise(nouveau, devise) },
         });
       }
       await tx.lettrage.deleteMany({ where: { id: { in: lettrages.map((l) => l.id) } } });
     }
 
-    return tx.piece.update({ where: { id }, data: { statut: "ANNULEE" } });
+    const annulee = await tx.piece.update({ where: { id }, data: { statut: "ANNULEE" } });
+    await tx.auditLog.create({
+      data: { dossierId: annulee.dossierId, type: "ANNULATION", pieceId: id, message: `Pièce ${annulee.numeroPiece} annulée` },
+    });
+    return annulee;
   });
 }

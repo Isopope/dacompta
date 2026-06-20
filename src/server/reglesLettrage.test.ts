@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 import { resetDb, seedComptesStandards } from "./test-helpers";
 import { creerPiece } from "./pieces";
+import { creerCompte } from "./comptes";
+import { creerTiers } from "./tiers";
 import { getLettragesByDossier } from "./lettrage";
 import {
   creerRegle,
@@ -155,6 +157,32 @@ describe("appliquerReglesLettrageAutomatique", () => {
     );
 
     await appliquerReglesLettrageAutomatique(dossierId);
+    expect(await getLettragesByDossier(dossierId)).toHaveLength(0);
+  });
+
+  it("ne lettre pas deux tiers différents d'un compte collectif", async () => {
+    await creerRegle({ dossierId, nom: "Clients collectif", prefixeCompte: "411", tolerancePct: 10, toleranceJours: 30 });
+    await creerCompte({ dossierId, numeroSaisi: "411200", intitule: "Clients", collectif: true });
+    const tA = await creerTiers({ dossierId, code: "C-A", nom: "A", type: "CLIENT" });
+    const tB = await creerTiers({ dossierId, code: "C-B", nom: "B", type: "CLIENT" });
+
+    await creerPiece({
+      dossierId, journalId, numeroPiece: "TA-1", datePiece: new Date("2020-01-01"),
+      lignes: [
+        { compteNumero: "411200", libelleLigne: "A", debit: 100_000, credit: 0, tiersId: tA.id },
+        { compteNumero: "707000", libelleLigne: "Vente", debit: 0, credit: 100_000 },
+      ],
+    });
+    await creerPiece({
+      dossierId, journalId, numeroPiece: "TB-1", datePiece: new Date("2020-01-05"),
+      lignes: [
+        { compteNumero: "521000", libelleLigne: "Banque", debit: 100_000, credit: 0 },
+        { compteNumero: "411200", libelleLigne: "B", debit: 0, credit: 100_000, tiersId: tB.id },
+      ],
+    });
+
+    await appliquerReglesLettrageAutomatique(dossierId);
+    // Tiers différents → aucun lettrage automatique (et aucune erreur).
     expect(await getLettragesByDossier(dossierId)).toHaveLength(0);
   });
 

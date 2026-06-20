@@ -3,6 +3,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { verifierLettrageValide } from "@/lib/comptabilite/integrite";
+import { arrondiDevise, estNulDevise } from "@/lib/comptabilite/devise";
 
 const D = (n: Prisma.Decimal.Value) => new Prisma.Decimal(n);
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -30,6 +31,8 @@ export interface OpenLineDTO {
   amountResidual: number; // absolu
   sens: 1 | -1; // 1 = débit, -1 = crédit
   pieceStatut: 'BROUILLON' | 'VALIDEE' | 'ANNULEE';
+  tiersId: string | null;
+  tiersNom: string | null;
 }
 
 function toDTO(l: {
@@ -65,14 +68,19 @@ export async function createLettrage(
   const [ligneDebit, ligneCredit, dossier] = await Promise.all([
     prisma.ligneEcriture.findUniqueOrThrow({
       where: { id: ligneDebitId },
-      include: { piece: { select: { dossierId: true } } },
+      include: { piece: { select: { dossierId: true } }, compte: { select: { reconciliable: true } } },
     }),
     prisma.ligneEcriture.findUniqueOrThrow({
       where: { id: ligneCreditId },
-      include: { piece: { select: { dossierId: true } } },
+      include: { piece: { select: { dossierId: true } }, compte: { select: { reconciliable: true } } },
     }),
     prisma.dossier.findUniqueOrThrow({ where: { id: dossierId }, select: { devise: true } }),
   ]);
+
+  // Montant effectivement lettré, arrondi à la précision de la devise (un FCFA
+  // n'a pas de sous-unité : 999,6 XOF n'existe pas → 1000). On valide et on
+  // applique ce montant arrondi, pas la saisie brute.
+  const m = arrondiDevise(D(montant), dossier.devise);
 
   // Validation via l'invariant I4 — remplace tous les checks inline précédents.
   verifierLettrageValide({
@@ -83,33 +91,33 @@ export async function createLettrage(
     dossierAttendu: dossierId,
     sensDebitOk: ligneDebit.debit.greaterThan(ligneDebit.credit),
     sensCreditOk: ligneCredit.credit.greaterThan(ligneCredit.debit),
-    montant: new Prisma.Decimal(montant),
+    compteReconciliable: ligneDebit.compte.reconciliable && ligneCredit.compte.reconciliable,
+    tiersDebit: ligneDebit.tiersId,
+    tiersCredit: ligneCredit.tiersId,
+    montant: m,
     residuelDebit: ligneDebit.amountResidual,
     residuelCredit: ligneCredit.amountResidual,
     devise: dossier.devise,
   });
 
-  const m = round2(montant);
-  const resDebit = round2(Number(ligneDebit.amountResidual));
-  const resCredit = round2(Number(ligneCredit.amountResidual));
-  const nouveauResDebit = round2(resDebit - m);
-  const nouveauResCredit = round2(resCredit - m);
+  const nouveauResDebit = arrondiDevise(D(ligneDebit.amountResidual).minus(m), dossier.devise);
+  const nouveauResCredit = arrondiDevise(D(ligneCredit.amountResidual).minus(m), dossier.devise);
 
   const [, , lettrage] = await prisma.$transaction([
     prisma.ligneEcriture.update({
       where: { id: ligneDebitId },
-      data: { amountResidual: D(nouveauResDebit), isLettres: nouveauResDebit === 0 },
+      data: { amountResidual: nouveauResDebit, isLettres: estNulDevise(nouveauResDebit, dossier.devise) },
     }),
     prisma.ligneEcriture.update({
       where: { id: ligneCreditId },
-      data: { amountResidual: D(nouveauResCredit), isLettres: nouveauResCredit === 0 },
+      data: { amountResidual: nouveauResCredit, isLettres: estNulDevise(nouveauResCredit, dossier.devise) },
     }),
     prisma.lettrage.create({
       data: {
         dossierId,
         ligneDebitId,
         ligneCreditId,
-        montant: D(m),
+        montant: m,
         auto: options.auto ?? false,
       },
     }),
@@ -125,21 +133,22 @@ export async function createLettrage(
 export async function deleteLettrage(id: string): Promise<void> {
   const lettrage = await prisma.lettrage.findUniqueOrThrow({
     where: { id },
-    include: { ligneDebit: true, ligneCredit: true },
+    include: { ligneDebit: true, ligneCredit: true, dossier: { select: { devise: true } } },
   });
 
-  const m = round2(Number(lettrage.montant));
-  const resDebit = round2(Number(lettrage.ligneDebit.amountResidual) + m);
-  const resCredit = round2(Number(lettrage.ligneCredit.amountResidual) + m);
+  const { devise } = lettrage.dossier;
+  const m = D(lettrage.montant);
+  const resDebit = arrondiDevise(D(lettrage.ligneDebit.amountResidual).plus(m), devise);
+  const resCredit = arrondiDevise(D(lettrage.ligneCredit.amountResidual).plus(m), devise);
 
   await prisma.$transaction([
     prisma.ligneEcriture.update({
       where: { id: lettrage.ligneDebitId },
-      data: { amountResidual: D(resDebit), isLettres: resDebit === 0 },
+      data: { amountResidual: resDebit, isLettres: estNulDevise(resDebit, devise) },
     }),
     prisma.ligneEcriture.update({
       where: { id: lettrage.ligneCreditId },
-      data: { amountResidual: D(resCredit), isLettres: resCredit === 0 },
+      data: { amountResidual: resCredit, isLettres: estNulDevise(resCredit, devise) },
     }),
     prisma.lettrage.delete({ where: { id } }),
   ]);
@@ -184,6 +193,7 @@ export async function getOpenLines(dossierId: string): Promise<OpenLineDTO[]> {
           journal: { select: { code: true } },
         },
       },
+      tiers: { select: { nom: true } },
     },
     orderBy: [
       { piece: { datePiece: "asc" } },
@@ -220,6 +230,8 @@ export async function getOpenLines(dossierId: string): Promise<OpenLineDTO[]> {
       amountResidual: Number(l.amountResidual),
       sens: sens as 1 | -1,
       pieceStatut: l.piece.statut as 'BROUILLON' | 'VALIDEE' | 'ANNULEE',
+      tiersId: l.tiersId,
+      tiersNom: l.tiers?.nom ?? null,
     };
   });
 }

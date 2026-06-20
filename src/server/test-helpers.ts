@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import {
   REFERENTIEL_CODE, REFERENTIEL_LIBELLE, CLASSES, NATURES,
 } from "@/lib/syscohada/referentiel";
+import { deduireAccountType, deduireReconciliable } from "@/lib/syscohada/compte-logic";
 
 const COMPTES_STD: { numero: string; intitule: string; classeNum: number }[] = [
   { numero: "101000", intitule: "Capital", classeNum: 1 },
@@ -21,16 +22,26 @@ const COMPTES_STD: { numero: string; intitule: string; classeNum: number }[] = [
 
 export async function seedComptesStandards(dossierId: string): Promise<void> {
   await prisma.compte.createMany({
-    data: COMPTES_STD.map((c) => ({ ...c, type: "DETAIL", reportNplus1: false, dossierId })),
+    data: COMPTES_STD.map((c) => {
+      const accountType = deduireAccountType(c.numero);
+      return {
+        ...c, type: "DETAIL", reportNplus1: false, dossierId,
+        accountType, reconciliable: deduireReconciliable(accountType),
+      };
+    }),
   });
 }
 
 /** Vide la base et reseed le référentiel + un dossier de test. Renvoie le dossierId. */
 export async function resetDb(): Promise<string> {
+  await prisma.auditLog.deleteMany();
   await prisma.lettrage.deleteMany();
   await prisma.regleLettrage.deleteMany();
+  await prisma.paiement.deleteMany();
   await prisma.ligneEcriture.deleteMany();
   await prisma.piece.deleteMany();
+  await prisma.taxe.deleteMany();
+  await prisma.tiers.deleteMany();
   await prisma.sequencePiece.deleteMany();
   await prisma.journal.deleteMany();
   await prisma.importLog.deleteMany();

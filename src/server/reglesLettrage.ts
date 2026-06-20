@@ -101,6 +101,7 @@ export async function supprimerRegle(id: string): Promise<void> {
 interface Candidat {
   id: string;
   compteNumero: string;
+  tiersId: string | null; // auxiliaire : le rapprochement auto reste dans le même tiers
   date: number; // timestamp de la pièce
   residuel: number; // montant restant à lettrer (suivi en mémoire pendant la passe)
 }
@@ -133,6 +134,7 @@ export async function appliquerReglesLettrageAutomatique(dossierId: string): Pro
       const cand: Candidat = {
         id: l.id,
         compteNumero: l.compteNumero,
+        tiersId: l.tiersId,
         date: l.piece.datePiece.getTime(),
         residuel: Number(l.amountResidual),
       };
@@ -153,6 +155,7 @@ export async function appliquerReglesLettrageAutomatique(dossierId: string): Pro
           !creditsConsommes.has(c.id) &&
           c.residuel > 0 &&
           c.compteNumero === d.compteNumero &&
+          c.tiersId === d.tiersId &&
           Math.abs(d.residuel - c.residuel) <= (regle.tolerancePct / 100) * d.residuel &&
           Math.abs(d.date - c.date) <= regle.toleranceJours * MS_PAR_JOUR
       );

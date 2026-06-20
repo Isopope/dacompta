@@ -21,6 +21,20 @@ describe("creerCompte", () => {
     await expect(creerCompte({ dossierId, numeroSaisi: "001100", intitule: "X" }))
       .rejects.toThrow(/Classe 0/);
   });
+  it("déduit accountType + reconciliable (client réconciliable, banque non)", async () => {
+    const client = await creerCompte({ dossierId, numeroSaisi: "411100", intitule: "Clients" });
+    expect(client.accountType).toBe("asset_receivable");
+    expect(client.reconciliable).toBe(true);
+
+    const banque = await creerCompte({ dossierId, numeroSaisi: "521100", intitule: "Banque" });
+    expect(banque.accountType).toBe("asset_cash");
+    expect(banque.reconciliable).toBe(false);
+  });
+  it("permet de forcer reconciliable à la création", async () => {
+    const tva = await creerCompte({ dossierId, numeroSaisi: "445200", intitule: "TVA déductible", reconciliable: true });
+    expect(tva.accountType).toBe("asset_current");
+    expect(tva.reconciliable).toBe(true);
+  });
 });
 
 describe("listerComptes", () => {

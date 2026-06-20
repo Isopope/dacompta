@@ -39,6 +39,16 @@ Ne PAS mettre de Prisma calls dans les composants client. Passer par les server 
 | **BudgetPoste** | Poste budgétaire (code, libelle, sens P/C, prevision, compteLie) |
 | **SoldeAnterieur** | Snapshots N-1 (compteNumero, montant signé débit−crédit) |
 | **ImportLog** | Historique des imports plan comptable |
+| **Tiers** | Tiers/auxiliaire (res.partner) — code, nom, type CLIENT/FOURNISSEUR/AUTRE |
+| **Taxe** | Taxe (account.tax) — taux, typeAmount, usage sale/purchase, priceInclude, exigibilite, compteNumero |
+| **Paiement** | Paiement (account.payment) — sens ENTRANT/SORTANT, tiers, pièce générée, etat |
+| **Lettrage / RegleLettrage** | Rapprochement partiel + règles auto (par compte ET tiers) |
+| **AuditLog** | Piste d'audit append-only (VALIDATION/ANNULATION/EXTOURNE/VERROU) |
+| **SequencePiece** | Compteur de séquence légale par (dossier, journal, exercice) |
+
+Champs Odoo-fidèles ajoutés : `Compte.accountType` (account_type) + `Compte.reconciliable` (account.reconcile) ;
+`LigneEcriture.tiersId` (partner_id), `taxeId` (tax_line_id), `balance` (solde signé débit−crédit) ;
+`Dossier.fiscalyearLockDate` / `hardLockDate` (lock dates, hard = irréversible).
 
 ### Services existants
 | Fichier | Fonction |
@@ -52,7 +62,16 @@ Ne PAS mettre de Prisma calls dans les composants client. Passer par les server 
 | `src/lib/etats/etats-financiers.ts` | Bilan, CR, TFT à partir de la balance |
 | `src/lib/syscohada/referentiel.ts` | Données SYSCOHADA révisé |
 | `src/lib/syscohada/compte-logic.ts` | Logique métier comptes (collectifs, analyse classe) |
-| `src/lib/comptabilite/integrite.ts` | Invariants purs : équilibre, signes, résiduel, lettrage, hash chaîné (I1–I6) — séquence légale, inaltérabilité, extourne, migration fail-fast |
+| `src/lib/comptabilite/integrite.ts` | Invariants purs : équilibre, signes, résiduel, lettrage (compte réconciliable + tiers), hash chaîné, verrou de période (I1–I6) |
+| `src/lib/comptabilite/devise.ts` | Arrondi à la précision de la devise (XOF/XAF 0 décimale) — `arrondiDevise`, `estNulDevise` |
+| `src/lib/comptabilite/taxe.ts` | Moteur de calcul de taxe pur (account.tax) — percent/fixed, price_include, devise-aware |
+| `src/lib/syscohada/compte-logic.ts` | + `deduireAccountType` / `deduireReconciliable` (mapping SYSCOHADA → énum Odoo) |
+| `src/server/tiers.ts` | CRUD tiers (auxiliaires) |
+| `src/server/taxes.ts` | CRUD taxes + `creerFacture` (lignes HT taxées → pièce équilibrée) + `getDeclarationTVA` |
+| `src/server/paiements.ts` | `enregistrerPaiement` (pièce trésorerie + lettrage auto FIFO) + `getEtatPaiementFacture` |
+| `src/server/auxiliaire.ts` | Grand-livre auxiliaire + balance âgée par tiers |
+| `src/server/verrou.ts` | `definirVerrou` (lock dates, hard lock irréversible) + `getAuditLog` |
+| `src/server/template.ts` | `instancierPlanSyscohada` (chart_template : déploie un plan par dossier) |
 
 ### Conventions code
 - Code commenté en français.

@@ -3,7 +3,7 @@ import {
   REFERENTIEL_CODE, REFERENTIEL_LIBELLE, CLASSES, NATURES,
   COMPTES_LES_ASSOCIES,
 } from "../src/lib/syscohada/referentiel";
-import { detecterNature, deduireReport, extraireClasse } from "../src/lib/syscohada/compte-logic";
+import { detecterNature, deduireReport, extraireClasse, deduireAccountType, deduireReconciliable } from "../src/lib/syscohada/compte-logic";
 
 const prisma = new PrismaClient();
 
@@ -84,17 +84,47 @@ async function main() {
   for (const c of COMPTES_LES_ASSOCIES) {
     const nature = detecterNature(c.numero, NATURES);
     const reportNplus1 = nature ? nature.reportNplus1 : deduireReport(extraireClasse(c.numero));
+    const accountType = deduireAccountType(c.numero);
     await prisma.compte.upsert({
       where: { dossierId_numero: { dossierId: dossier.id, numero: c.numero } },
-      update: { intitule: c.intitule },
+      update: { intitule: c.intitule, accountType, reconciliable: deduireReconciliable(accountType) },
       create: {
         numero: c.numero, intitule: c.intitule, type: c.type,
         classeNum: extraireClasse(c.numero),
         natureRacine: nature?.racine ?? null,
         reportNplus1,
         collectif: c.collectif ?? false,
+        accountType,
+        reconciliable: deduireReconciliable(accountType),
         dossierId: dossier.id,
       },
+    });
+  }
+
+  // Tiers (auxiliaires) — requis sur les lignes des comptes collectifs 401/411.
+  const TIERS = [
+    { code: "C001", nom: "Client Alpha SARL", type: "CLIENT" },
+    { code: "C002", nom: "Client Beta SA", type: "CLIENT" },
+    { code: "F001", nom: "Fournisseur Gamma", type: "FOURNISSEUR" },
+  ];
+  for (const t of TIERS) {
+    await prisma.tiers.upsert({
+      where: { dossierId_code: { dossierId: dossier.id, code: t.code } },
+      update: { nom: t.nom, type: t.type },
+      create: { code: t.code, nom: t.nom, type: t.type, dossierId: dossier.id },
+    });
+  }
+
+  // Taxes (TVA 18% Togo) — vente (collectée 443) et achat (déductible 445).
+  const TAXES = [
+    { code: "TVA18", nom: "TVA 18% (collectée)", taux: 18, usage: "sale", compteNumero: "443100" },
+    { code: "TVA18A", nom: "TVA 18% (déductible)", taux: 18, usage: "purchase", compteNumero: "445200" },
+  ];
+  for (const t of TAXES) {
+    await prisma.taxe.upsert({
+      where: { dossierId_code: { dossierId: dossier.id, code: t.code } },
+      update: { nom: t.nom, taux: t.taux, usage: t.usage, compteNumero: t.compteNumero },
+      create: { ...t, dossierId: dossier.id },
     });
   }
 

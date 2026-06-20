@@ -3,7 +3,7 @@ import fc from "fast-check";
 import { Prisma } from "@prisma/client";
 import {
   ErreurIntegrite, verifierSignesLigne, verifierPieceNonVide,
-  verifierEquilibre, verifierResiduel, verifierLettrageValide,
+  verifierEquilibre, verifierResiduel, verifierLettrageValide, verifierDateNonVerrouillee,
   calculerHash, verifierChaine, type PieceHashInput,
 } from "./integrite";
 
@@ -53,7 +53,8 @@ describe("verifierResiduel", () => {
 const base = {
   compteDebit: "411000", compteCredit: "411000",
   dossierDebit: "d1", dossierCredit: "d1", dossierAttendu: "d1",
-  sensDebitOk: true, sensCreditOk: true,
+  sensDebitOk: true, sensCreditOk: true, compteReconciliable: true,
+  tiersDebit: null as string | null, tiersCredit: null as string | null,
   montant: D(50), residuelDebit: D(100), residuelCredit: D(50), devise: "XOF",
 };
 
@@ -64,6 +65,27 @@ describe("verifierLettrageValide", () => {
   it("refuse un montant > min(résiduels)", () => { expect(() => verifierLettrageValide({ ...base, montant: D(80) })).toThrow(ErreurIntegrite); });
   it("refuse un montant ≤ 0", () => { expect(() => verifierLettrageValide({ ...base, montant: D(0) })).toThrow(ErreurIntegrite); });
   it("refuse un sens incompatible", () => { expect(() => verifierLettrageValide({ ...base, sensDebitOk: false })).toThrow(ErreurIntegrite); });
+  it("refuse un compte non réconciliable", () => { expect(() => verifierLettrageValide({ ...base, compteReconciliable: false })).toThrow(ErreurIntegrite); });
+  it("accepte deux lignes du même tiers", () => { expect(() => verifierLettrageValide({ ...base, tiersDebit: "t1", tiersCredit: "t1" })).not.toThrow(); });
+  it("refuse deux tiers différents sur le même compte collectif", () => { expect(() => verifierLettrageValide({ ...base, tiersDebit: "t1", tiersCredit: "t2" })).toThrow(ErreurIntegrite); });
+});
+
+describe("verifierDateNonVerrouillee", () => {
+  const lock = { fiscalyearLockDate: new Date("2020-12-31"), hardLockDate: null };
+  it("refuse une date antérieure ou égale au verrou", () => {
+    expect(() => verifierDateNonVerrouillee(new Date("2020-12-31"), lock)).toThrow(ErreurIntegrite);
+    expect(() => verifierDateNonVerrouillee(new Date("2020-06-01"), lock)).toThrow(ErreurIntegrite);
+  });
+  it("accepte une date postérieure au verrou", () => {
+    expect(() => verifierDateNonVerrouillee(new Date("2021-01-01"), lock)).not.toThrow();
+  });
+  it("retient le verrou le plus restrictif (hard > soft)", () => {
+    const v = { fiscalyearLockDate: new Date("2020-01-31"), hardLockDate: new Date("2020-06-30") };
+    expect(() => verifierDateNonVerrouillee(new Date("2020-05-01"), v)).toThrow(ErreurIntegrite);
+  });
+  it("sans verrou, n'impose rien", () => {
+    expect(() => verifierDateNonVerrouillee(new Date("2020-01-01"), { fiscalyearLockDate: null, hardLockDate: null })).not.toThrow();
+  });
 });
 
 const p = (numero: string, debit: string): PieceHashInput => ({

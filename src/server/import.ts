@@ -4,6 +4,7 @@ import * as XLSX from "xlsx";
 import { prisma } from "@/lib/db";
 import { NATURES, CLASSES } from "@/lib/syscohada/referentiel";
 import { detecterRolesColonnes, construireLignesImport, type LigneImport } from "@/lib/syscohada/import-mapping";
+import { deduireAccountType, deduireReconciliable } from "@/lib/syscohada/compte-logic";
 
 export type ModeImport = "FUSIONNER" | "REMPLACER" | "AJOUTER";
 
@@ -51,13 +52,16 @@ export async function appliquerImport(
     for (const l of lignes) {
       if (l.controle === "hors-syscohada") continue;            // jamais importé
       if (l.controle === "doublon" && mode === "AJOUTER") continue; // ignoré en mode ajout
+      const accountType = deduireAccountType(l.numero);
       const compte = await tx.compte.upsert({
         where: { dossierId_numero: { dossierId, numero: l.numero } },
-        update: { intitule: l.intitule, type: l.type, statut: "ACTIF", reportNplus1: l.reportNplus1 },
+        update: { intitule: l.intitule, type: l.type, statut: "ACTIF", reportNplus1: l.reportNplus1, accountType },
         create: {
           numero: l.numero, intitule: l.intitule, type: l.type,
           classeNum: Number(l.numero.charAt(0)),
-          natureRacine: l.natureRacine, reportNplus1: l.reportNplus1, dossierId,
+          natureRacine: l.natureRacine, reportNplus1: l.reportNplus1,
+          accountType, reconciliable: deduireReconciliable(accountType),
+          dossierId,
         },
       });
       affectes.push(compte.id);

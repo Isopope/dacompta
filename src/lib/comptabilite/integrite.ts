@@ -41,6 +41,8 @@ export interface LettrageArgs {
   compteDebit: string; compteCredit: string;
   dossierDebit: string; dossierCredit: string; dossierAttendu: string;
   sensDebitOk: boolean; sensCreditOk: boolean;
+  compteReconciliable: boolean;
+  tiersDebit: string | null; tiersCredit: string | null;
   montant: Prisma.Decimal; residuelDebit: Prisma.Decimal; residuelCredit: Prisma.Decimal;
   devise: string;
 }
@@ -52,6 +54,12 @@ export function verifierLettrageValide(a: LettrageArgs): void {
   }
   if (a.compteDebit !== a.compteCredit) {
     throw new ErreurIntegrite(`Comptes différents (${a.compteDebit} ≠ ${a.compteCredit}).`);
+  }
+  if (!a.compteReconciliable) {
+    throw new ErreurIntegrite(`Compte ${a.compteDebit} non réconciliable : lettrage interdit.`);
+  }
+  if (a.tiersDebit !== a.tiersCredit) {
+    throw new ErreurIntegrite("Tiers différents : le lettrage doit porter sur un même tiers du compte collectif.");
   }
   if (!a.sensDebitOk || !a.sensCreditOk) {
     throw new ErreurIntegrite("Sens incompatible — il faut une ligne débit et une ligne crédit.");
@@ -73,6 +81,31 @@ export function verifierResiduel(
   const attendu = arrondiDevise(D(debit).minus(D(credit)).abs().minus(sommeLettree), devise);
   if (!estNulDevise(D(amountResidual).minus(attendu), devise)) {
     throw new ErreurIntegrite(`Résiduel incohérent : ${amountResidual} attendu ${attendu}.`);
+  }
+}
+
+export interface VerrouxDates {
+  fiscalyearLockDate: Date | null;
+  hardLockDate: Date | null;
+}
+
+/** Date de verrou la plus restrictive (la plus récente des deux). */
+export function dateVerrouEffective(v: VerrouxDates): Date | null {
+  const dates = [v.fiscalyearLockDate, v.hardLockDate].filter((d): d is Date => d != null);
+  if (dates.length === 0) return null;
+  return dates.reduce((a, b) => (a.getTime() >= b.getTime() ? a : b));
+}
+
+/**
+ * Verrou de période (Odoo lock dates) : toute écriture dont la date est
+ * antérieure ou égale au verrou effectif est refusée.
+ */
+export function verifierDateNonVerrouillee(date: Date, v: VerrouxDates): void {
+  const lock = dateVerrouEffective(v);
+  if (lock && date.getTime() <= lock.getTime()) {
+    throw new ErreurIntegrite(
+      `Période verrouillée jusqu'au ${lock.toISOString().slice(0, 10)} : écriture refusée à la date ${date.toISOString().slice(0, 10)}.`,
+    );
   }
 }
 

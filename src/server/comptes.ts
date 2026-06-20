@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { NATURES, CLASSES } from "@/lib/syscohada/referentiel";
 import {
   completerNumero, detecterNature, deduireReport, extraireClasse, validerNumero,
+  deduireAccountType, deduireReconciliable,
 } from "@/lib/syscohada/compte-logic";
 
 export interface CreerCompteInput {
@@ -12,6 +13,7 @@ export interface CreerCompteInput {
   intitule: string;
   type?: "DETAIL" | "TOTAL";
   collectif?: boolean;
+  reconciliable?: boolean;
 }
 
 export async function creerCompte(input: CreerCompteInput) {
@@ -26,6 +28,7 @@ export async function creerCompte(input: CreerCompteInput) {
 
   const nature = detecterNature(numero, NATURES);
   const reportNplus1 = nature ? nature.reportNplus1 : deduireReport(extraireClasse(numero));
+  const accountType = deduireAccountType(numero);
   return prisma.compte.create({
     data: {
       numero,
@@ -35,6 +38,9 @@ export async function creerCompte(input: CreerCompteInput) {
       natureRacine: nature?.racine ?? null,
       reportNplus1,
       collectif: input.collectif ?? false,
+      accountType,
+      // Réconciliable : valeur forcée si fournie, sinon défaut Odoo (receivable/payable).
+      reconciliable: input.reconciliable ?? deduireReconciliable(accountType),
       dossierId: input.dossierId,
     },
   });
@@ -52,7 +58,10 @@ export async function listerComptes(dossierId: string, filtre: FiltreComptes) {
   return comptes.filter((c) => c.numero.includes(t) || c.intitule.toLowerCase().includes(t));
 }
 
-export async function modifierCompte(id: string, data: { intitule?: string; type?: "DETAIL" | "TOTAL" }) {
+export async function modifierCompte(
+  id: string,
+  data: { intitule?: string; type?: "DETAIL" | "TOTAL"; reconciliable?: boolean },
+) {
   return prisma.compte.update({ where: { id }, data });
 }
 

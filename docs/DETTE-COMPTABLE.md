@@ -191,6 +191,40 @@ dettes par tiers) gagnent en finesse une fois #8 livré, mais une v1 est livrabl
 
 ---
 
+## Mise à jour — chantiers livrés (auto-mode, fidélité Odoo)
+
+Tous les écarts du `docs/COMPARATIF-ODOO.md` ont été traités en TDD (**185 tests verts**,
+typecheck + build OK). Détail par chantier :
+
+| Chantier | Cible Odoo | Livré |
+|----------|-----------|-------|
+| **#7** Devise/arrondi | `currency.round/is_zero` | ✅ `round2` éliminé du chemin de lettrage (create/delete/annuler/extourne/créationRésiduel) — exact en XOF |
+| **#3** account_type + reconciliable | `account.account.account_type` / `account.reconcile` | ✅ enum Odoo dérivé du n° SYSCOHADA ; lettrage refusé sur compte non réconciliable |
+| **#2** Tiers + auxiliaires | `res.partner` + `partner_id` | ✅ modèle `Tiers`, `tiersId` sur ligne, lettrage par (compte, tiers), grand-livre auxiliaire + balance âgée |
+| **#4** Moteur de taxes | `account.tax` | ✅ modèle `Taxe`, moteur pur (percent/fixed/price_include), `creerFacture`, déclaration TVA (collectée/déductible/nette) |
+| **#5** Paiements | `account.payment` / `payment_state` | ✅ `enregistrerPaiement` (pièce trésorerie + lettrage auto FIFO), `etatPaiement` dérivé (NON_PAYE/PARTIEL/PAYE) |
+| **#4/#10b** Verrou + audit | lock dates + audit trail | ✅ `fiscalyearLockDate` + `hardLockDate` (irréversible), `AuditLog` append-only |
+| **#1b** Balance signé | `account.move.line.balance` | ✅ colonne `balance` (debit−credit) peuplée à la création |
+| **#8** Template plan | `chart_template.try_loading` | ✅ `instancierPlanSyscohada(dossierId)` idempotent |
+
+### Arbitrages assumés (fidélité Odoo vs réalité DaCompta)
+- **`balance` sans CHECK base** : Odoo garde balance en source unique via compute ; ici
+  debit/credit sont **immuables** après création et l'équilibre est déjà garanti, donc
+  `balance` est peuplé applicativement sans contrainte CHECK (évite de propager la
+  contrainte aux insertions brutes de test). Pas de risque de dérive (aucun update de debit/credit).
+- **Balance âgée approximée sur la date de pièce** : faute d'échéances (`date_maturity`
+  Odoo / payment terms), les tranches d'âge sont calculées depuis la date de pièce.
+  À affiner quand les conditions de paiement seront introduites.
+- **Auth / record rules multi-société (#8, 2e volet) : DÉFÉRÉ** — décision produit.
+  Odoo isole par `record rules` sur une identité utilisateur ; DaCompta n'a **aucun
+  système d'authentification**. L'isolation reste structurelle (`dossierId`). Le choix
+  d'un fournisseur d'auth (NextAuth, Clerk…) appartient au produit et n'a pas été inventé.
+- **Reste non couvert** : câblage **UI** des nouveaux services (tiers, taxes, paiements,
+  verrou, auxiliaire) ; états normés **AUDCIF/SIG** (#9) ; écart de change multi-devises
+  sur lettrage.
+
+---
+
 ## Synthèse
 
 1. **#7 Devise/arrondi** — fondation « argent exact », débloque le reste.
