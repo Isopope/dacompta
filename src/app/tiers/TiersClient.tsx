@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { DataTable } from "@/components/DataTable";
-import { creerTiers } from "@/server/tiers";
+import { creerTiers, type TypeTiers } from "@/server/tiers";
 
 // Type local représentant un tiers affiché dans la liste
 type T = { id: string; code: string; nom: string; type: string };
@@ -22,9 +22,9 @@ export function TiersClient({ tiers, dossierId }: { tiers: T[]; dossierId: strin
   /** Soumet le formulaire : appelle la server action creerTiers puis rafraîchit la page. */
   async function ajouter() {
     setErreur(null);
-    try { await creerTiers({ dossierId, code, nom, type: type as "CLIENT" | "FOURNISSEUR" | "AUTRE" }); }
+    try { await creerTiers({ dossierId, code, nom, type: type as TypeTiers }); }
     catch (e) { setErreur(e instanceof Error ? e.message : "Erreur"); return; }
-    setCode(""); setNom(""); router.refresh();
+    setCode(""); setNom(""); setType("CLIENT"); router.refresh();
   }
 
   return (
@@ -38,7 +38,7 @@ export function TiersClient({ tiers, dossierId }: { tiers: T[]; dossierId: strin
             <option value="CLIENT">Client</option><option value="FOURNISSEUR">Fournisseur</option><option value="AUTRE">Autre</option>
           </select>
         </label>
-        <button className="btn primary" onClick={ajouter} disabled={!code || !nom}>+ Ajouter</button>
+        <button className="btn primary" onClick={ajouter} disabled={!code.trim() || !nom.trim()}>+ Ajouter</button>
         {/* Affichage de l'erreur si la création échoue */}
         {erreur && <span className="badge warn">{erreur}</span>}
       </div>
