@@ -8,7 +8,8 @@ export default function Page() {
     { href: "/ventes/paiements", label: "Paiements" },
     { href: "/ventes/balance-agee", label: "Balance âgée" },
     { href: "/tiers", label: "Tiers" },
-    { href: "/etats", label: "Déclaration TVA" },
+    { href: "/etats", label: "États & documents" },
+    { href: "/etats/tva", label: "Déclaration TVA" },
   ];
 
   return (

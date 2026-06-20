@@ -21,7 +21,7 @@ const SOUS_MENUS: Record<string, { label: string; href: string }[]> = {
     { label: "Balance âgée", href: "/ventes/balance-agee" },
   ],
   tiers: [{ label: "Tiers", href: "/tiers" }],
-  etats: [{ label: "États & documents", href: "/etats" }],
+  etats: [{ label: "États & documents", href: "/etats" }, { label: "Déclaration TVA", href: "/etats/tva" }],
 };
 
 export async function Shell({
