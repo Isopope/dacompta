@@ -91,7 +91,7 @@ export function NouveauDossierWizard({ pays }: { pays: PaysOption[] }) {
           <h2 style={{ fontSize: 16 }}>Exercice &amp; devise</h2>
           <label style={{ display: "block", margin: "12px 0 8px" }}>
             <div className="muted" style={{ fontSize: 12 }}>Exercice (année)</div>
-            <input className="input" type="number" value={exercice}
+            <input className="input" type="number" min={2000} max={2100} value={exercice}
               onChange={(e) => setExercice(Number(e.target.value))} />
           </label>
           <label style={{ display: "block", marginBottom: 8 }}>
@@ -123,7 +123,7 @@ export function NouveauDossierWizard({ pays }: { pays: PaysOption[] }) {
             <button type="button" onClick={() => setEtape(2)} disabled={pending}>← Retour</button>
             <div style={{ flex: 1 }} />
             <button type="button" onClick={creer} disabled={pending} style={{ fontWeight: 700 }}>
-              {pending ? "Création…" : "Créer & ouvrir ✓"}
+              {pending ? "Création…" : "Créer &amp; ouvrir ✓"}
             </button>
           </div>
         </div>
