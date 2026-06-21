@@ -81,3 +81,86 @@ export const COMPTES_LES_ASSOCIES: CompteSeed[] = [
   { numero: "605300", intitule: "Achat carburant", type: "DETAIL" },
   { numero: "706100", intitule: "Recette transport", type: "DETAIL" },
 ];
+
+// Plan SYSCOHADA de base, générique et réutilisable pour tout NOUVEAU dossier.
+// Donnée de référence propre — à NE PAS confondre avec COMPTES_LES_ASSOCIES (démo
+// spécifique au cas « Les Associés SA »). classeNum/natureRacine/accountType, etc.
+// sont DÉRIVÉS à la création (voir creerDossier), pas stockés ici.
+export const COMPTES_BASE_SYSCOHADA: CompteSeed[] = [
+  // Classe 1 — Ressources durables
+  { numero: "101000", intitule: "Capital social", type: "DETAIL" },
+  { numero: "106000", intitule: "Réserves", type: "DETAIL" },
+  { numero: "120000", intitule: "Report à nouveau", type: "DETAIL" },
+  { numero: "130000", intitule: "Résultat net de l'exercice", type: "DETAIL" },
+  { numero: "162000", intitule: "Emprunts auprès des établissements de crédit", type: "DETAIL" },
+  { numero: "165000", intitule: "Dépôts et cautionnements reçus", type: "DETAIL" },
+  // Classe 2 — Actif immobilisé
+  { numero: "213000", intitule: "Logiciels", type: "DETAIL" },
+  { numero: "220000", intitule: "Terrains", type: "DETAIL" },
+  { numero: "231000", intitule: "Bâtiments", type: "DETAIL" },
+  { numero: "241000", intitule: "Matériel et outillage", type: "DETAIL" },
+  { numero: "244000", intitule: "Matériel et mobilier de bureau", type: "DETAIL" },
+  { numero: "245000", intitule: "Matériel de transport", type: "DETAIL" },
+  { numero: "275000", intitule: "Dépôts et cautionnements versés", type: "DETAIL" },
+  { numero: "281000", intitule: "Amortissements des bâtiments", type: "DETAIL" },
+  { numero: "284400", intitule: "Amortissements du matériel et mobilier de bureau", type: "DETAIL" },
+  { numero: "284500", intitule: "Amortissements du matériel de transport", type: "DETAIL" },
+  // Classe 3 — Stocks
+  { numero: "311000", intitule: "Marchandises", type: "DETAIL" },
+  { numero: "321000", intitule: "Matières premières et fournitures", type: "DETAIL" },
+  { numero: "351000", intitule: "Produits finis", type: "DETAIL" },
+  { numero: "388000", intitule: "Stocks en cours de route", type: "DETAIL" },
+  // Classe 4 — Tiers
+  { numero: "401000", intitule: "Fournisseurs", type: "DETAIL", collectif: true },
+  { numero: "408000", intitule: "Fournisseurs, factures non parvenues", type: "DETAIL" },
+  { numero: "409000", intitule: "Fournisseurs débiteurs, avances et acomptes", type: "DETAIL" },
+  { numero: "411000", intitule: "Clients", type: "DETAIL", collectif: true },
+  { numero: "416000", intitule: "Clients douteux ou litigieux", type: "DETAIL" },
+  { numero: "418000", intitule: "Clients, produits à recevoir", type: "DETAIL" },
+  { numero: "421000", intitule: "Personnel, rémunérations dues", type: "DETAIL" },
+  { numero: "431000", intitule: "Sécurité sociale (CNSS)", type: "DETAIL" },
+  { numero: "441000", intitule: "État, impôt sur les bénéfices", type: "DETAIL" },
+  { numero: "443100", intitule: "État, TVA facturée (collectée)", type: "DETAIL" },
+  { numero: "445100", intitule: "État, TVA récupérable sur immobilisations", type: "DETAIL" },
+  { numero: "445200", intitule: "État, TVA récupérable sur achats (déductible)", type: "DETAIL" },
+  { numero: "447000", intitule: "État, autres impôts et taxes", type: "DETAIL" },
+  { numero: "471000", intitule: "Comptes d'attente", type: "DETAIL" },
+  { numero: "476000", intitule: "Charges constatées d'avance", type: "DETAIL" },
+  { numero: "477000", intitule: "Produits constatés d'avance", type: "DETAIL" },
+  // Classe 5 — Trésorerie
+  { numero: "521000", intitule: "Banques (comptes locaux)", type: "DETAIL" },
+  { numero: "531000", intitule: "Chèques postaux", type: "DETAIL" },
+  { numero: "571000", intitule: "Caisse", type: "DETAIL" },
+  { numero: "585000", intitule: "Virements internes / de fonds", type: "DETAIL" },
+  // Classe 6 — Charges
+  { numero: "601000", intitule: "Achats de marchandises", type: "DETAIL" },
+  { numero: "602000", intitule: "Achats de matières premières", type: "DETAIL" },
+  { numero: "604000", intitule: "Achats stockés de matières et fournitures", type: "DETAIL" },
+  { numero: "605000", intitule: "Autres achats (eau, électricité, carburant)", type: "DETAIL" },
+  { numero: "608000", intitule: "Achats d'emballages", type: "DETAIL" },
+  { numero: "611000", intitule: "Transports", type: "DETAIL" },
+  { numero: "622000", intitule: "Locations et charges locatives", type: "DETAIL" },
+  { numero: "624000", intitule: "Entretien, réparations et maintenance", type: "DETAIL" },
+  { numero: "625000", intitule: "Primes d'assurance", type: "DETAIL" },
+  { numero: "627000", intitule: "Publicité, relations publiques", type: "DETAIL" },
+  { numero: "628000", intitule: "Frais de télécommunications", type: "DETAIL" },
+  { numero: "631000", intitule: "Frais bancaires", type: "DETAIL" },
+  { numero: "632000", intitule: "Rémunérations d'intermédiaires et de conseils", type: "DETAIL" },
+  { numero: "641000", intitule: "Impôts et taxes directs", type: "DETAIL" },
+  { numero: "661000", intitule: "Rémunérations directes versées au personnel", type: "DETAIL" },
+  { numero: "663000", intitule: "Charges sociales", type: "DETAIL" },
+  { numero: "671000", intitule: "Intérêts des emprunts et dettes", type: "DETAIL" },
+  { numero: "681000", intitule: "Dotations aux amortissements d'exploitation", type: "DETAIL" },
+  // Classe 7 — Produits
+  { numero: "701000", intitule: "Ventes de marchandises", type: "DETAIL" },
+  { numero: "702000", intitule: "Ventes de produits finis", type: "DETAIL" },
+  { numero: "706000", intitule: "Services vendus", type: "DETAIL" },
+  { numero: "707000", intitule: "Produits accessoires", type: "DETAIL" },
+  { numero: "711000", intitule: "Subventions d'exploitation", type: "DETAIL" },
+  { numero: "758000", intitule: "Produits divers de gestion courante", type: "DETAIL" },
+  { numero: "771000", intitule: "Revenus financiers et assimilés", type: "DETAIL" },
+  { numero: "781000", intitule: "Reprises d'amortissements et provisions", type: "DETAIL" },
+  // Classe 8 — HAO
+  { numero: "812000", intitule: "Valeurs comptables des cessions d'immobilisations", type: "DETAIL" },
+  { numero: "822000", intitule: "Produits des cessions d'immobilisations", type: "DETAIL" },
+];
