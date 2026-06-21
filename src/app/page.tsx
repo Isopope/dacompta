@@ -63,17 +63,17 @@ export default async function Page() {
             <Link href={cockpit.aControler.href} className="panel" style={{ padding: 16, textDecoration: "none", color: "inherit" }}>
               <div className="muted" style={{ fontSize: 12 }}>À contrôler</div>
               <div className="mono" style={{ fontSize: 24 }}>{cockpit.aControler.count}</div>
-              <div className="muted" style={{ fontSize: 12 }}>pièces en brouillon</div>
+              <div className="muted" style={{ fontSize: 12 }}>{cockpit.aControler.count === 0 ? "Rien à contrôler" : "pièces en brouillon"}</div>
             </Link>
             <Link href={cockpit.aLettrer.href} className="panel" style={{ padding: 16, textDecoration: "none", color: "inherit" }}>
               <div className="muted" style={{ fontSize: 12 }}>À lettrer</div>
               <div className="mono" style={{ fontSize: 24 }}>{cockpit.aLettrer.count}</div>
-              <div className="muted" style={{ fontSize: 12 }}>lignes ouvertes</div>
+              <div className="muted" style={{ fontSize: 12 }}>{cockpit.aLettrer.count === 0 ? "Rien à lettrer" : "lignes ouvertes"}</div>
             </Link>
             <Link href={cockpit.aDeclarer.href} className="panel" style={{ padding: 16, textDecoration: "none", color: "inherit" }}>
               <div className="muted" style={{ fontSize: 12 }}>À déclarer</div>
               <div className="mono" style={{ fontSize: 24 }}>{fmt(cockpit.aDeclarer.netteDue)} {devise}</div>
-              <div className="muted" style={{ fontSize: 12 }}>TVA nette due</div>
+              <div className="muted" style={{ fontSize: 12 }}>{cockpit.aDeclarer.netteDue <= 0 ? "Rien à déclarer" : "TVA nette due"}</div>
             </Link>
           </div>
 

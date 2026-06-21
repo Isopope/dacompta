@@ -3,7 +3,6 @@
 
 import { prisma } from "@/lib/db";
 import { listerDossiers } from "./dossiers";
-import { getOpenLines } from "./lettrage";
 import { getDeclarationTVA } from "./taxes";
 
 export interface ResumeDossier {
@@ -16,19 +15,26 @@ export interface ResumeDossier {
 
 /**
  * Vue portefeuille multi-dossier : pour chaque dossier, des compteurs LÉGERS
- * (brouillons, lignes à lettrer, TVA nette due). Volontairement sans balance
- * complète par dossier pour rester rapide sur un cabinet de plusieurs dossiers.
+ * (brouillons, lignes à lettrer, TVA nette due). Le compteur "à lettrer" est
+ * une requête COUNT directe (même filtre que getOpenLines : pièce non annulée,
+ * amountResidual > 0), sans charger les lignes ni la balance complète, pour
+ * rester rapide sur un cabinet de plusieurs dossiers.
  */
 export async function getPortefeuille(): Promise<ResumeDossier[]> {
   const dossiers = await listerDossiers();
   return Promise.all(
     dossiers.map(async (d) => {
-      const [nbBrouillons, openLines, tva] = await Promise.all([
+      const [nbBrouillons, nbALettrer, tva] = await Promise.all([
         prisma.piece.count({ where: { dossierId: d.id, statut: "BROUILLON" } }),
-        getOpenLines(d.id),
+        prisma.ligneEcriture.count({
+          where: {
+            piece: { dossierId: d.id, statut: { not: "ANNULEE" } },
+            amountResidual: { gt: 0 },
+          },
+        }),
         getDeclarationTVA(d.id),
       ]);
-      return { id: d.id, nom: d.nom, nbBrouillons, nbALettrer: openLines.length, tvaDue: tva.netteDue };
+      return { id: d.id, nom: d.nom, nbBrouillons, nbALettrer, tvaDue: tva.netteDue };
     })
   );
 }
