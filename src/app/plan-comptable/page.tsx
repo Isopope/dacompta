@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/db";
+import { Shell } from "@/components/Shell";
+import { getDossierIdCookie } from "@/lib/dossier-context";
 import { listerComptes } from "@/server/comptes";
 import { CLASSES, NATURES } from "@/lib/syscohada/referentiel";
 import PlanComptableClient from "./PlanComptableClient";
@@ -7,18 +9,29 @@ import PlanComptableClient from "./PlanComptableClient";
 export const dynamic = "force-dynamic";
 
 export default async function PlanComptablePage() {
-  const dossier = await prisma.dossier.findFirstOrThrow();
-  const comptes = await listerComptes(dossier.id, {});
+  // Dossier courant lu depuis le cookie (cohérent avec le DossierSwitcher).
+  const dossierId = await getDossierIdCookie();
+  const dossier = dossierId
+    ? await prisma.dossier.findUnique({ where: { id: dossierId } })
+    : null;
+  const comptes = dossier ? await listerComptes(dossier.id, {}) : [];
+
   return (
-    <div className="container">
-      <h1>Plan comptable — {dossier.nom}</h1>
-      <p className="muted">{dossier.ville}, {dossier.pays} · {dossier.devise} · exercice {dossier.exercice} · SYSCOHADA révisé</p>
-      <PlanComptableClient
-        dossierId={dossier.id}
-        comptesInitiaux={comptes}
-        classes={CLASSES}
-        natures={NATURES}
-      />
-    </div>
+    <Shell breadcrumb={[{ label: "Plan comptable" }]}>
+      {dossier && (
+        <>
+          <h1>Plan comptable — {dossier.nom}</h1>
+          <p className="muted">
+            {dossier.ville}, {dossier.pays} · {dossier.devise} · exercice {dossier.exercice} · SYSCOHADA révisé
+          </p>
+          <PlanComptableClient
+            dossierId={dossier.id}
+            comptesInitiaux={comptes}
+            classes={CLASSES}
+            natures={NATURES}
+          />
+        </>
+      )}
+    </Shell>
   );
 }
