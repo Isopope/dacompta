@@ -3,12 +3,11 @@
 import { useMemo, useState } from "react";
 import type { BalanceResultat, GrandLivreCompte } from "@/server/balance";
 import type { Bilan, CompteResultat, FluxTresorerie } from "@/lib/etats/etats-financiers";
+import type { DocId } from "@/lib/etats/export";
 
 const fmt = (n: number) =>
   n === 0 ? "" : n.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 const fmt0 = (n: number) => n.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-
-type DocId = "balance-generale" | "grand-livre" | "bilan" | "compte-resultat" | "flux-tresorerie";
 
 interface DocDef {
   id: string;
@@ -180,8 +179,17 @@ export default function EtatsClient(props: {
           <Apercu docId={docId as DocId} {...props} />
         </div>
         <div className="row" style={{ padding: 14, borderTop: "1px solid var(--line)", gap: 8 }}>
-          <button className="btn" disabled>⬇ PDF</button>
-          <button className="btn" disabled>⬇ Excel</button>
+          {docCourant?.pret ? (
+            <>
+              <a className="btn" href={`/etats/export?doc=${docId}&format=pdf`} download>⬇ PDF</a>
+              <a className="btn" href={`/etats/export?doc=${docId}&format=xlsx`} download>⬇ Excel</a>
+            </>
+          ) : (
+            <>
+              <button className="btn" disabled>⬇ PDF</button>
+              <button className="btn" disabled>⬇ Excel</button>
+            </>
+          )}
         </div>
       </aside>
     </div>
