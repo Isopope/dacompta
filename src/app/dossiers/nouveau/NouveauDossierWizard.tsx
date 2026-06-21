@@ -123,7 +123,7 @@ export function NouveauDossierWizard({ pays }: { pays: PaysOption[] }) {
             <button type="button" onClick={() => setEtape(2)} disabled={pending}>← Retour</button>
             <div style={{ flex: 1 }} />
             <button type="button" onClick={creer} disabled={pending} style={{ fontWeight: 700 }}>
-              {pending ? "Création…" : "Créer &amp; ouvrir ✓"}
+              {pending ? "Création…" : "Créer & ouvrir ✓"}
             </button>
           </div>
         </div>
