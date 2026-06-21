@@ -19,13 +19,6 @@ const eslintConfig = defineConfig([
     "update_all_exercice.js",
     "test_lettrage.js",
   ]),
-  // Pre-existing issues in src files that are not yet fixed.
-  {
-    files: ["src/app/ventes/factures/page.tsx"],
-    rules: {
-      "@next/next/no-html-link-for-pages": "warn",
-    },
-  },
 ]);
 
 export default eslintConfig;
