@@ -1,7 +1,6 @@
 import { Shell } from "@/components/Shell";
 import { getDossierIdCookie } from "@/lib/dossier-context";
-import { getBalance, getGrandLivre } from "@/server/balance";
-import { deriverBilan, deriverCompteResultat, deriverFluxTresorerie } from "@/lib/etats/etats-financiers";
+import { getEtatsData } from "@/server/etats";
 import EtatsClient from "./EtatsClient";
 
 // États déduits d'une base vivante : rendu dynamique, jamais figé au build.
@@ -18,13 +17,8 @@ export default async function EtatsPage() {
     );
   }
 
-  const [balance, grandLivre] = await Promise.all([
-    getBalance(dossierId),
-    getGrandLivre(dossierId),
-  ]);
-  const bilan = deriverBilan(balance);
-  const compteResultat = deriverCompteResultat(balance);
-  const fluxTresorerie = deriverFluxTresorerie(balance, grandLivre);
+  const { balance, grandLivre, bilan, compteResultat, fluxTresorerie } =
+    await getEtatsData(dossierId);
 
   return (
     <Shell module="etats" breadcrumb={[{ label: "États" }, { label: "États & documents" }]}>
