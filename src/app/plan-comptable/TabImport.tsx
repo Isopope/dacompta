@@ -37,7 +37,7 @@ export default function TabImport({ dossierId }: { dossierId: string }) {
 
   return (
     <>
-      <p className="muted">Excel (.xlsx) ou CSV — déposez le fichier tel quel, l'ordre des colonnes n'a pas d'importance.</p>
+      <p className="muted">Excel (.xlsx) ou CSV — déposez le fichier tel quel, l&apos;ordre des colonnes n&apos;a pas d&apos;importance.</p>
       <input type="file" accept=".csv,.xlsx,.xls" onChange={onFichier} />
 
       {lignes && (

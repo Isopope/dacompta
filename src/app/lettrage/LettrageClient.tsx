@@ -36,8 +36,8 @@ export default function LettrageClient(props: {
       const lines = await getOpenLines(props.dossierId);
       setOpenLines(lines);
       setError(null);
-    } catch (err: any) {
-      setError(err.message ?? "Erreur lors du chargement des lignes ouvertes");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur lors du chargement des lignes ouvertes");
     } finally {
       setLoading(false);
     }
@@ -107,8 +107,8 @@ export default function LettrageClient(props: {
       await loadOpenLines();
       // Clear selection
       clearSelection();
-    } catch (err: any) {
-      setError(err.message ?? "Erreur lors du lettrage.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur lors du lettrage.");
     } finally {
       setLoading(false);
     }

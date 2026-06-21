@@ -1,5 +1,6 @@
 "use client";
 // Sidebar de navigation — organise les pages selon le cycle comptable.
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { DossierSwitcher } from "./DossierSwitcher";
 
@@ -82,7 +83,7 @@ export function Sidebar({
         padding: "12px 0",
       }}
     >
-      <a
+      <Link
         href="/"
         style={{
           fontWeight: 700,
@@ -93,7 +94,7 @@ export function Sidebar({
         }}
       >
         DaCompta
-      </a>
+      </Link>
       <div style={{ padding: "0 16px 12px" }}>
         <DossierSwitcher dossiers={dossiers} courantId={courantId} />
       </div>
