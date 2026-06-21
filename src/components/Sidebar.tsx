@@ -110,7 +110,7 @@ export function Sidebar({
             {g.entrees.map((e) => {
               const estActif = e.href === actif;
               return (
-                <a
+                <Link
                   key={e.href}
                   href={e.href}
                   aria-current={estActif ? "page" : undefined}
@@ -125,7 +125,7 @@ export function Sidebar({
                   }}
                 >
                   {e.label}
-                </a>
+                </Link>
               );
             })}
           </div>
