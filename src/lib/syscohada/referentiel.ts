@@ -89,7 +89,7 @@ export const COMPTES_LES_ASSOCIES: CompteSeed[] = [
 export const COMPTES_BASE_SYSCOHADA: CompteSeed[] = [
   // Classe 1 — Ressources durables
   { numero: "101000", intitule: "Capital social", type: "DETAIL" },
-  { numero: "106000", intitule: "Réserves", type: "DETAIL" },
+  { numero: "106000", intitule: "Réserves (légales et autres)", type: "DETAIL" },
   { numero: "120000", intitule: "Report à nouveau", type: "DETAIL" },
   { numero: "130000", intitule: "Résultat net de l'exercice", type: "DETAIL" },
   { numero: "162000", intitule: "Emprunts auprès des établissements de crédit", type: "DETAIL" },
@@ -131,7 +131,7 @@ export const COMPTES_BASE_SYSCOHADA: CompteSeed[] = [
   { numero: "521000", intitule: "Banques (comptes locaux)", type: "DETAIL" },
   { numero: "531000", intitule: "Chèques postaux", type: "DETAIL" },
   { numero: "571000", intitule: "Caisse", type: "DETAIL" },
-  { numero: "585000", intitule: "Virements internes / de fonds", type: "DETAIL" },
+  { numero: "585000", intitule: "Virements internes", type: "DETAIL" },
   // Classe 6 — Charges
   { numero: "601000", intitule: "Achats de marchandises", type: "DETAIL" },
   { numero: "602000", intitule: "Achats de matières premières", type: "DETAIL" },

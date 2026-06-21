@@ -27,7 +27,7 @@ describe("COMPTES_BASE_SYSCOHADA", () => {
     expect(c411?.collectif).toBe(true);
   });
 
-  it("couvre les classes 1 à 7", () => {
+  it("couvre au minimum les classes 1 à 7", () => {
     const classes = new Set(COMPTES_BASE_SYSCOHADA.map((c) => Number(c.numero[0])));
     for (const cl of [1, 2, 3, 4, 5, 6, 7]) expect(classes.has(cl)).toBe(true);
     // toutes les classes utilisées sont déclarées dans CLASSES
