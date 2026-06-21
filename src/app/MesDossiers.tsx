@@ -2,6 +2,7 @@
 "use client";
 // Table portefeuille « Mes dossiers » : compteurs par dossier + bouton « Ouvrir »
 // qui bascule le dossier courant (cookie) puis rafraîchit la page.
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { choisirDossier } from "@/server/dossiers";
@@ -26,9 +27,13 @@ export function MesDossiers({
 
   return (
     <section style={{ marginTop: 32 }} aria-labelledby="mes-dossiers-titre">
-      <h2 id="mes-dossiers-titre" style={{ fontSize: 16, marginBottom: 8 }}>Mes dossiers</h2>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <h2 id="mes-dossiers-titre" style={{ fontSize: 16, margin: 0 }}>Mes dossiers</h2>
+        <div style={{ flex: 1 }} />
+        <Link href="/dossiers/nouveau" className="chip">+ Nouveau dossier</Link>
+      </div>
       {dossiers.length === 0 ? (
-        <p className="muted">Aucun dossier. Créez-en un pour commencer.</p>
+        <p className="muted">Aucun dossier pour l&apos;instant.</p>
       ) : (
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
