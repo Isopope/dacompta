@@ -7,6 +7,7 @@ export async function Shell({
   breadcrumb,
   action,
   children,
+  horsGarde,
 }: {
   // `module` est accepté pour compatibilité avec les appels existants mais n'est
   // plus utilisé : l'état actif de la navigation est dérivé du pathname (Sidebar).
@@ -14,6 +15,9 @@ export async function Shell({
   breadcrumb: { label: string; href?: string }[];
   action?: ReactNode;
   children: ReactNode;
+  // Contenu rendu dans TOUS les cas, même sans dossier courant (ex. « Mes dossiers »,
+  // qui sert justement à choisir un dossier). Rendu sous le contenu gardé.
+  horsGarde?: ReactNode;
 }) {
   // Chargement parallèle des dossiers et du dossier courant.
   const [dossiers, courant] = await Promise.all([listerDossiers(), getDossierCourant()]);
@@ -46,7 +50,10 @@ export async function Shell({
           </div>
           {action}
         </div>
-        <main className="container">{!courant ? <EcranAucunDossier /> : children}</main>
+        <main className="container">
+          {!courant ? <EcranAucunDossier /> : children}
+          {horsGarde}
+        </main>
       </div>
     </div>
   );
