@@ -25,8 +25,8 @@ export function MesDossiers({
   }
 
   return (
-    <section style={{ marginTop: 32 }}>
-      <h2 style={{ fontSize: 16, marginBottom: 8 }}>Mes dossiers</h2>
+    <section style={{ marginTop: 32 }} aria-labelledby="mes-dossiers-titre">
+      <h2 id="mes-dossiers-titre" style={{ fontSize: 16, marginBottom: 8 }}>Mes dossiers</h2>
       {dossiers.length === 0 ? (
         <p className="muted">Aucun dossier. Créez-en un pour commencer.</p>
       ) : (
@@ -38,7 +38,7 @@ export function MesDossiers({
                 <th style={{ textAlign: "right", padding: 8 }}>Brouillons</th>
                 <th style={{ textAlign: "right", padding: 8 }}>À lettrer</th>
                 <th style={{ textAlign: "right", padding: 8 }}>TVA due</th>
-                <th style={{ padding: 8 }}></th>
+                <th style={{ padding: 8 }} aria-label="Actions"></th>
               </tr>
             </thead>
             <tbody>
@@ -52,7 +52,7 @@ export function MesDossiers({
                   <td style={{ padding: 8, textAlign: "right" }} className="mono">{d.nbALettrer}</td>
                   <td style={{ padding: 8, textAlign: "right" }} className="mono">{d.tvaDue.toLocaleString("fr-FR")}</td>
                   <td style={{ padding: 8, textAlign: "right" }}>
-                    <button onClick={() => ouvrir(d.id)} disabled={pending || d.id === courantId}>
+                    <button type="button" onClick={() => ouvrir(d.id)} disabled={pending || d.id === courantId}>
                       Ouvrir
                     </button>
                   </td>
