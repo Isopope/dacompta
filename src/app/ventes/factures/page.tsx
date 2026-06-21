@@ -1,4 +1,5 @@
 // Page liste des factures clients — Server Component async
+import Link from "next/link";
 import { Shell } from "@/components/Shell";
 import { getDossierIdCookie } from "@/lib/dossier-context";
 import { listerFactures } from "@/server/factures";
@@ -13,7 +14,7 @@ export default async function Page() {
     <Shell
       module="ventes"
       breadcrumb={[{ label: "Ventes" }, { label: "Factures clients" }]}
-      action={<a className="btn primary" href="/ventes/factures/nouvelle">+ Nouvelle facture</a>}
+      action={<Link className="btn primary" href="/ventes/factures/nouvelle">+ Nouvelle facture</Link>}
     >
       <FacturesClient factures={factures} />
     </Shell>
